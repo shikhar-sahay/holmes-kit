@@ -158,6 +158,9 @@ set "CT_PSCOLOR="
 exit /b 0
 
 :: ================================================================
+:: HEADER: ASCII logo
+:: ================================================================
+:: ================================================================
 :: HEADER: HOLMESKIT LOGO
 :: ================================================================
 :print_header
@@ -237,18 +240,43 @@ if /I "%HK_RP%"=="Y" call :create_restore_point
 exit /b 0
 
 :: ================================================================
-:: RESTORE POINT - opens System Protection window for user
+:: RESTORE POINT (fixed)
 :: ================================================================
 :create_restore_point
 echo.
-powershell -NoProfile -Command "Write-Host '  Opening System Protection window...' -ForegroundColor Yellow"
-call :log "Opened System Protection window for user"
-start "" SystemPropertiesProtection.exe
+powershell -NoProfile -Command "Write-Host '  Creating restore point - this may take a moment...' -ForegroundColor Yellow"
 echo.
-echo   Create a restore point in the window that just opened,
-echo   then come back here and press any key to continue.
+call :log "Attempting to create system restore point"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$drive = $env:SystemDrive + '\'; " ^
+  "Enable-ComputerRestore -Drive $drive -ErrorAction SilentlyContinue; " ^
+  "$lastRP = Get-ComputerRestorePoint | Select-Object -Last 1; " ^
+  "$skip = $false; " ^
+  "if ($lastRP) { " ^
+    "$created = $lastRP.ConvertToDateTime($lastRP.CreationTime); " ^
+    "$age = ((Get-Date) - $created).TotalMinutes; " ^
+    "if ($age -lt 1440) { $skip = $true } " ^
+  "} " ^
+  "if (-not $skip) { " ^
+    "Checkpoint-Computer -Description 'HolmesKit Pre-Change' -RestorePointType APPLICATION_INSTALL -ErrorAction Stop; " ^
+    "exit 0 " ^
+  "} else { exit 2 }" 2>nul
+
+if %errorlevel%==0 (
+    powershell -NoProfile -Command "Write-Host '  Restore point created successfully.' -ForegroundColor Green"
+    call :log "Restore point created successfully"
+) else if %errorlevel%==2 (
+    powershell -NoProfile -Command "Write-Host '  Skipped - a restore point was already created recently.' -ForegroundColor Yellow"
+    call :log "Restore point skipped - recent one exists"
+) else (
+    powershell -NoProfile -Command "Write-Host '  Could not create restore point automatically.' -ForegroundColor Red"
+    echo.
+    echo   This can happen if System Restore is disabled on your drive.
+    echo   You can enable it via: Control Panel ^> System ^> System Protection
+    call :log "Restore point creation failed"
+)
 echo.
-pause >nul
 exit /b 0
 
 :: ================================================================
