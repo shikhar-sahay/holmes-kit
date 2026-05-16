@@ -20,9 +20,10 @@ powershell -NoProfile -Command ^
   "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Advanced Tweaks' -ForegroundColor White;" ^
   "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Gaming Mode' -ForegroundColor White;" ^
   "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Defaults' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Manager' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apps Manager' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Red -NoNewline; Write-Host ']  Exit' -ForegroundColor White;" ^
+  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  System Info' -ForegroundColor White;" ^
+  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Manager' -ForegroundColor White;" ^
+  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apps Manager' -ForegroundColor White;" ^
+  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '8' -ForegroundColor Red -NoNewline; Write-Host ']  Exit' -ForegroundColor White;" ^
   "Write-Host '';" ^
   "Write-Host '                 ==============================================================' -ForegroundColor DarkGray;"
 echo.
@@ -31,12 +32,12 @@ if "%HK_MAIN%"=="1" goto core_menu
 if "%HK_MAIN%"=="2" goto advanced_menu
 if "%HK_MAIN%"=="3" goto gaming_menu
 if "%HK_MAIN%"=="4" goto restore_menu
-if "%HK_MAIN%"=="5" goto startup_manager
-if "%HK_MAIN%"=="6" goto apps_manager
-if "%HK_MAIN%"=="7" exit /b 0
+if "%HK_MAIN%"=="5" goto system_info
+if "%HK_MAIN%"=="6" goto startup_manager
+if "%HK_MAIN%"=="7" goto apps_manager
+if "%HK_MAIN%"=="8" exit /b 0
 goto main_menu
 
-:: ================================================================
 :core_menu
 cls
 call :print_header
@@ -59,7 +60,6 @@ if "%HK_CORE%"=="4" call :confirm_run "Safe Background Cleanup" "Force-closes co
 if "%HK_CORE%"=="5" goto main_menu
 goto core_menu
 
-:: ================================================================
 :advanced_menu
 cls
 call :print_header
@@ -86,7 +86,6 @@ if "%HK_ADV%"=="6" call :confirm_run "Disable Hibernation" "Disables Windows hib
 if "%HK_ADV%"=="7" goto main_menu
 goto advanced_menu
 
-:: ================================================================
 :gaming_menu
 cls
 call :print_header
@@ -107,7 +106,6 @@ if "%HK_GAME%"=="3" call :confirm_run "Full Gaming Prep" "Runs FPS Tweaks and La
 if "%HK_GAME%"=="4" goto main_menu
 goto gaming_menu
 
-:: ================================================================
 :restore_menu
 cls
 call :print_header
@@ -143,11 +141,8 @@ echo.
 pause >nul
 goto main_menu
 
-:: ================================================================
-:: CONFIRM SCREEN
-:: Usage: call :confirm_run "Title" "Description" "Affected"
-:: Sets HK_CONFIRMED=1 if user says Y
-:: ================================================================
+:: show what an option does and ask before running it
+:: sets HK_CONFIRMED=1 if user says Y
 :confirm_run
 set "HK_CONFIRMED=0"
 cls
@@ -186,9 +181,7 @@ powershell -NoProfile -Command ^
   "Write-Host '';"
 exit /b 0
 
-:: ================================================================
-:: LOGGING
-:: ================================================================
+:: simple timestamped log - writes to HolmesKit_Backups/holmeskit.log
 :log
 set "LG_MSG=%~1"
 for /f "tokens=1-3 delims=/ " %%a in ('date /t') do set "LG_DATE=%%a/%%b/%%c"
@@ -196,9 +189,7 @@ for /f "tokens=1-2 delims=: " %%a in ('time /t') do set "LG_TIME=%%a:%%b"
 echo [%LG_DATE% %LG_TIME%] %LG_MSG% >> "%HK_LOG%" 2>nul
 exit /b 0
 
-:: ================================================================
-:: ADMIN CHECK
-:: ================================================================
+:: bail early if not running as admin
 :require_admin
 net session >nul 2>&1
 if %errorlevel%==0 exit /b 0
@@ -209,9 +200,7 @@ echo.
 pause
 exit /b 1
 
-:: ================================================================
-:: INIT PATHS
-:: ================================================================
+:: set up folder paths and start the log
 :init_paths
 set "HK_ROOT=%~dp0"
 if "%HK_ROOT:~-1%"=="\" set "HK_ROOT=%HK_ROOT:~0,-1%"
@@ -224,9 +213,7 @@ set "HK_CONFIRMED=0"
 call :log "=== HolmesKit session started ==="
 exit /b 0
 
-:: ================================================================
-:: STARTUP NOTICE
-:: ================================================================
+:: show disclaimer and offer to open system restore before anything runs
 :startup_notice
 cls
 call :print_header
@@ -247,9 +234,7 @@ set /p HK_RP=                   Create a restore point now? [Y/N]:
 if /I "%HK_RP%"=="Y" call :create_restore_point
 exit /b 0
 
-:: ================================================================
-:: RESTORE POINT
-:: ================================================================
+:: just open the system protection window - simpler than scripting it
 :create_restore_point
 echo.
 powershell -NoProfile -Command "Write-Host '  Opening System Protection window...' -ForegroundColor Yellow"
@@ -262,9 +247,7 @@ echo.
 pause >nul
 exit /b 0
 
-:: ================================================================
-:: REGISTRY BACKUP
-:: ================================================================
+:: export affected registry keys before making any changes
 :ensure_backup
 if "%HK_BACKUP_READY%"=="1" exit /b 0
 if exist "%HK_LATEST%" rd /s /q "%HK_LATEST%" >nul 2>&1
@@ -292,9 +275,7 @@ exit /b 0
 reg export "%~1" "%HK_LATEST%\%~2" /y >nul 2>&1
 exit /b 0
 
-:: ================================================================
-:: CORE: Full run
-:: ================================================================
+:: core: runs all four steps in sequence
 :run_full_core
 call :ensure_backup
 call :cleanup_temp
@@ -306,9 +287,7 @@ powershell -NoProfile -Command "Write-Host '  Full Core Optimization Completed.'
 echo.
 exit /b 0
 
-:: ================================================================
-:: CORE: Temp cleanup
-:: ================================================================
+:: core: wipe temp folders and flush dns
 :cleanup_temp
 call :log "Starting temp/cache cleanup"
 powershell -NoProfile -Command "Write-Host '  [*] Cleaning Temp And Cache Folders...' -ForegroundColor Cyan"
@@ -332,9 +311,7 @@ del /f /s /q "%~1\*" >nul 2>&1
 for /d %%D in ("%~1\*") do rd /s /q "%%~fD" >nul 2>&1
 exit /b 0
 
-:: ================================================================
-:: CORE: Power plan
-:: ================================================================
+:: core: switch to high performance plan
 :apply_power_plan
 call :log "Applying High Performance power plan"
 powershell -NoProfile -Command "Write-Host '  [*] Applying High Performance Power Plan...' -ForegroundColor Cyan"
@@ -344,7 +321,7 @@ if %errorlevel%==0 (
     powershell -NoProfile -Command "Write-Host '  High Performance Plan Activated.' -ForegroundColor Green"
     call :log "High Performance plan activated"
 ) else (
-    for /f "tokens=4" %%G in ('powercfg /list ^| findstr /i "High performance"') do set "HK_POWER_GUID=%%G"
+    for /f "tokens=4 delims=: " %%G in ('powercfg /list ^| findstr /i "High performance"') do set "HK_POWER_GUID=%%G"
     if defined HK_POWER_GUID (
         powercfg /setactive !HK_POWER_GUID! >nul 2>&1
         powershell -NoProfile -Command "Write-Host '  High Performance Plan Activated.' -ForegroundColor Green"
@@ -357,9 +334,7 @@ if %errorlevel%==0 (
 echo.
 exit /b 0
 
-:: ================================================================
-:: CORE: Background app cleanup
-:: ================================================================
+:: core: kill common background apps
 :cleanup_background
 call :log "Terminating background processes"
 powershell -NoProfile -Command "Write-Host '  [*] Terminating Background Apps...' -ForegroundColor Cyan"
@@ -375,9 +350,7 @@ powershell -NoProfile -Command "Write-Host '  Background Cleanup Completed.' -Fo
 echo.
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: UI responsiveness
-:: ================================================================
+:: advanced: registry tweaks for snappier ui and lower disk i/o
 :ui_responsiveness_tweaks
 call :log "Applying UI responsiveness tweaks"
 powershell -NoProfile -Command "Write-Host '  [*] Applying UI Responsiveness Tweaks...' -ForegroundColor Cyan"
@@ -387,9 +360,9 @@ reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d "4000" /f >n
 reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d "5000" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v ForegroundLockTimeout /t REG_DWORD /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d "1" /f >nul 2>&1
-:: Give foreground apps longer CPU time slices (value 26 = short variable quanta, foreground boost)
+:: foreground apps get longer cpu slices
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "26" /f >nul 2>&1
-:: Disable NTFS Last Access timestamp updates - reduces I/O on every file read
+:: skip writing last-access timestamps on file reads
 fsutil behavior set disablelastaccess 1 >nul 2>&1
 call :restart_explorer
 call :log "UI responsiveness tweaks applied"
@@ -397,9 +370,7 @@ powershell -NoProfile -Command "Write-Host '  UI Responsiveness Tweaks Applied.'
 echo.
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: Visual effects
-:: ================================================================
+:: advanced: strip animations and visual fluff
 :visual_performance_mode
 call :log "Applying visual effects performance mode"
 powershell -NoProfile -Command "Write-Host '  [*] Applying Visual Effects Performance Mode...' -ForegroundColor Cyan"
@@ -415,9 +386,7 @@ powershell -NoProfile -Command "Write-Host '  Visual Effects Performance Mode Ap
 echo.
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: Startup pruning
-:: ================================================================
+:: advanced: remove common startup registry entries
 :startup_pruning
 call :log "Running startup pruning"
 powershell -NoProfile -Command "Write-Host '  [*] Removing Startup Entries...' -ForegroundColor Cyan"
@@ -440,9 +409,7 @@ exit /b 0
 reg delete "%~1" /v "%~2" /f >nul 2>&1
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: Network maintenance
-:: ================================================================
+:: advanced: flush/reset network stack
 :network_maintenance
 call :log "Running network maintenance"
 powershell -NoProfile -Command "Write-Host '  [*] Running Network Maintenance...' -ForegroundColor Cyan"
@@ -457,15 +424,13 @@ powershell -NoProfile -Command "Write-Host '  Network Maintenance Completed. A R
 echo.
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: Background services cleanup (new - real gains)
-:: ================================================================
+:: advanced: stop and disable high-overhead background services
 :services_cleanup
 call :log "Running background services cleanup"
 powershell -NoProfile -Command "Write-Host '  [*] Stopping And Disabling Background Services...' -ForegroundColor Cyan"
 echo.
 
-:: Save current service start types before changing anything
+:: save current state so restore works
 set "HK_SVC_FILE=%HK_LATEST%\service_states.txt"
 echo SysMain > "%HK_SVC_FILE%"
 sc qc SysMain 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
@@ -474,17 +439,17 @@ sc qc WSearch 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
 echo DiagTrack >> "%HK_SVC_FILE%"
 sc qc DiagTrack 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
 
-:: SysMain (Superfetch) - preloads apps into RAM, causes heavy disk I/O on HDDs and older SSDs
+:: SysMain/Superfetch - heavy disk I/O, most noticeable on HDDs
 sc stop SysMain >nul 2>&1
 sc config SysMain start= disabled >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [-] SysMain (Superfetch) stopped and disabled' -ForegroundColor DarkGray"
 
-:: WSearch (Windows Search Indexer) - constantly indexes files in background, hammers disk I/O
+:: WSearch - background file indexing hammers disk
 sc stop WSearch >nul 2>&1
 sc config WSearch start= disabled >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [-] WSearch (Search Indexer) stopped and disabled' -ForegroundColor DarkGray"
 
-:: DiagTrack (Connected User Experiences / Telemetry) - sends usage data to Microsoft, pure overhead
+:: DiagTrack/Telemetry - pure overhead, nothing user-facing
 sc stop DiagTrack >nul 2>&1
 sc config DiagTrack start= disabled >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [-] DiagTrack (Telemetry) stopped and disabled' -ForegroundColor DarkGray"
@@ -497,9 +462,7 @@ powershell -NoProfile -Command "Write-Host '  the Restore menu to re-enable if n
 echo.
 exit /b 0
 
-:: ================================================================
-:: ADVANCED: Disable hibernation
-:: ================================================================
+:: advanced: turn off hibernation and reclaim hiberfil.sys space
 :disable_hibernation
 call :log "Disabling hibernation"
 powershell -NoProfile -Command "Write-Host '  [*] Disabling Hibernation...' -ForegroundColor Cyan"
@@ -510,24 +473,22 @@ powershell -NoProfile -Command "Write-Host '  Hibernation Disabled.' -Foreground
 echo.
 exit /b 0
 
-:: ================================================================
-:: GAMING: FPS tweaks
-:: ================================================================
+:: gaming: dvr off, mmcss priority, power plan
 :gaming_fps_tweaks
 call :log "Applying gaming FPS tweaks"
 powershell -NoProfile -Command "Write-Host '  [*] Applying FPS Tweaks...' -ForegroundColor Cyan"
 echo.
 call :apply_power_plan
-:: Disable Xbox Game DVR - background capture overlay
+:: game dvr capture overlay
 reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d "0" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d "0" /f >nul 2>&1
 reg add "HKLM\Software\Policies\Microsoft\Windows\GameDVR" /v AllowGameDVR /t REG_DWORD /d "0" /f >nul 2>&1
-:: MMCSS game thread scheduling - GPU and I/O priority for tagged game processes
+:: mmcss scheduling for game threads
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d "8" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d "6" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
-:: SystemResponsiveness=0: dedicate multimedia scheduler fully to games (no background CPU reservation)
+:: give games the full multimedia scheduler budget
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d "0" /f >nul 2>&1
 call :visual_performance_mode
 call :cleanup_background
@@ -536,25 +497,23 @@ powershell -NoProfile -Command "Write-Host '  FPS Tweaks Applied.' -ForegroundCo
 echo.
 exit /b 0
 
-:: ================================================================
-:: GAMING: Latency maintenance
-:: ================================================================
+:: gaming: tcp stack cleanup, nagle off, pause windows update delivery
 :gaming_latency_maintenance
 call :log "Applying gaming latency maintenance"
 powershell -NoProfile -Command "Write-Host '  [*] Applying Latency Maintenance...' -ForegroundColor Cyan"
 echo.
 ipconfig /flushdns >nul 2>&1
 netsh winsock reset >nul 2>&1
-:: TCP Fast Open - reduces handshake overhead on repeated connections
+:: tcp fast open - less handshake overhead
 netsh int tcp set global fastopen=enabled >nul 2>&1
-:: RSS (Receive Side Scaling) - distributes network receive load across CPU cores
+:: rss - spread network load across cores
 netsh int tcp set global rss=enabled >nul 2>&1
-:: Disable TCP autotuning - fixes receive buffer at smaller size, reduces latency at cost of throughput
+:: smaller fixed receive buffer = lower latency, less throughput (fine for gaming)
 netsh int tcp set global autotuninglevel=disabled >nul 2>&1
 :: Disable Nagle algorithm - sends packets immediately instead of batching (lower latency, slightly more packets)
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /v TcpAckFrequency /t REG_DWORD /d "1" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d "1" /f >nul 2>&1
-:: Pause Windows Update delivery and Background Intelligent Transfer during session
+:: disable nagle - send packets immediately instead of batching
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -Type DWord -Force -EA SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -Type DWord -Force -EA SilentlyContinue }" >nul 2>&1
+:: pause windows update delivery for the session
 for %%S in (DoSvc BITS) do net stop %%S >nul 2>&1
 call :cleanup_background
 call :log "Gaming latency maintenance applied"
@@ -562,9 +521,7 @@ powershell -NoProfile -Command "Write-Host '  Latency Maintenance Applied. A Res
 echo.
 exit /b 0
 
-:: ================================================================
-:: GAMING: Full prep
-:: ================================================================
+:: gaming: fps + latency in one shot
 :gaming_full_prep
 call :gaming_fps_tweaks
 call :gaming_latency_maintenance
@@ -573,9 +530,7 @@ powershell -NoProfile -Command "Write-Host '  Full Gaming Prep Completed.' -Fore
 echo.
 exit /b 0
 
-:: ================================================================
-:: RESTORE: Registry
-:: ================================================================
+:: restore: reimport all saved .reg files
 :restore_latest_registry
 if not exist "%HK_LATEST%" (
     powershell -NoProfile -Command "Write-Host '  No Backup Found. Run An Optimization First.' -ForegroundColor Red"
@@ -593,10 +548,10 @@ for %%F in (
 ) do (
     if exist "%HK_LATEST%\%%~F" reg import "%HK_LATEST%\%%~F" >nul 2>&1
 )
-:: Restore NTFS last access and Win32PrioritySeparation
+:: restore ntfs and cpu priority settings
 fsutil behavior set disablelastaccess 0 >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "2" /f >nul 2>&1
-:: Re-enable TCP autotuning to Windows default
+:: restore tcp autotuning
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
 call :restart_explorer
 call :log "Registry restoration completed"
@@ -604,9 +559,7 @@ powershell -NoProfile -Command "Write-Host '  Registry Restoration Completed.' -
 echo.
 exit /b 0
 
-:: ================================================================
-:: RESTORE: Background services
-:: ================================================================
+:: restore: bring back the services we stopped
 :restore_services
 call :log "Re-enabling background services"
 powershell -NoProfile -Command "Write-Host '  [*] Re-Enabling Background Services...' -ForegroundColor Cyan"
@@ -626,9 +579,7 @@ powershell -NoProfile -Command "Write-Host '  Background Services Re-Enabled.' -
 echo.
 exit /b 0
 
-:: ================================================================
-:: RESTORE: Power defaults
-:: ================================================================
+:: restore: reset to windows default power schemes
 :restore_power_defaults
 call :log "Restoring default power schemes"
 powershell -NoProfile -Command "Write-Host '  [*] Restoring Default Power Schemes...' -ForegroundColor Cyan"
@@ -639,9 +590,7 @@ powershell -NoProfile -Command "Write-Host '  Default Power Schemes Restored.' -
 echo.
 exit /b 0
 
-:: ================================================================
-:: RESTORE: Hibernation
-:: ================================================================
+:: restore: re-enable hibernation
 :enable_hibernation
 call :log "Re-enabling hibernation"
 powershell -NoProfile -Command "Write-Host '  [*] Re-Enabling Hibernation...' -ForegroundColor Cyan"
@@ -652,9 +601,7 @@ powershell -NoProfile -Command "Write-Host '  Hibernation Enabled.' -ForegroundC
 echo.
 exit /b 0
 
-:: ================================================================
-:: RESTORE: Network defaults
-:: ================================================================
+:: restore: undo network tweaks
 :restore_network_defaults
 call :log "Resetting network stack"
 powershell -NoProfile -Command "Write-Host '  [*] Resetting Network Stack...' -ForegroundColor Cyan"
@@ -664,23 +611,30 @@ netsh int ip reset >nul 2>&1
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
 netsh int tcp set global fastopen=disabled >nul 2>&1
 ipconfig /flushdns >nul 2>&1
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Force -EA SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Force -EA SilentlyContinue }" >nul 2>&1
 call :log "Network stack reset"
 powershell -NoProfile -Command "Write-Host '  Network Reset Complete. A Restart Is Recommended.' -ForegroundColor Green"
 echo.
 exit /b 0
 
-:: ================================================================
-:: UTILITY: Restart Explorer
-:: ================================================================
+:: restart explorer to apply registry changes
 :restart_explorer
 call :log "Restarting Explorer"
 taskkill /f /im explorer.exe >nul 2>&1
 start "" explorer.exe
 exit /b 0
 
-:: ================================================================
-:: STARTUP MANAGER
-:: ================================================================
+:: system info: real-time dashboard, refreshes every 5s
+:system_info
+call :log "Opened System Info Panel"
+set "HK_PS_SI=%HK_STATE%\hk_sysinfo.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$b=[System.Convert]::FromBase64String('CiMgSG9sbWVzS2l0IFN5c3RlbSBJbmZvIFBhbmVsIC0gUmVhbC10aW1lIGRhc2hib2FyZAoKZnVuY3Rpb24gR2V0LUJhclN0cmluZygkdmFsdWUsICRtYXgsICR3aWR0aCkgewogICAgJGZpbGxlZCA9IFtNYXRoXTo6Um91bmQoKCR2YWx1ZSAvICRtYXgpICogJHdpZHRoKQogICAgJGZpbGxlZCA9IFtNYXRoXTo6TWF4KDAsIFtNYXRoXTo6TWluKCRmaWxsZWQsICR3aWR0aCkpCiAgICAkZW1wdHkgID0gJHdpZHRoIC0gJGZpbGxlZAogICAgJGNvbG9yICA9IGlmICgkdmFsdWUgLWd0IDg1KSB7ICJSZWQiIH0gZWxzZWlmICgkdmFsdWUgLWd0IDYwKSB7ICJZZWxsb3ciIH0gZWxzZSB7ICJHcmVlbiIgfQogICAgV3JpdGUtSG9zdCAiWyIgLU5vTmV3bGluZSAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5CiAgICBXcml0ZS1Ib3N0ICgiJChbY2hhcl0weDI1ODgpIiAqICRmaWxsZWQpIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciAkY29sb3IKICAgIFdyaXRlLUhvc3QgKCIgIiAqICRlbXB0eSkgLU5vTmV3bGluZSAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5CiAgICBXcml0ZS1Ib3N0ICJdICIgLU5vTmV3bGluZSAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5Cn0KCmZ1bmN0aW9uIEdldC1Ub3BQcm9jZXNzZXMoJHR5cGUsICRjb3VudCkgewogICAgaWYgKCR0eXBlIC1lcSAiQ1BVIikgewogICAgICAgIHJldHVybiBHZXQtUHJvY2VzcyB8IFdoZXJlLU9iamVjdCB7ICRfLkNQVSAtZ3QgMCB9IHwKICAgICAgICAgICAgU29ydC1PYmplY3QgQ1BVIC1EZXNjZW5kaW5nIHwKICAgICAgICAgICAgU2VsZWN0LU9iamVjdCAtRmlyc3QgJGNvdW50IE5hbWUsCiAgICAgICAgICAgICAgICBAe049IlZhbHVlIjsgRT17IFtNYXRoXTo6Um91bmQoJF8uQ1BVLCAxKS5Ub1N0cmluZygpICsgInMgQ1BVIiB9fQogICAgfSBlbHNlIHsKICAgICAgICByZXR1cm4gR2V0LVByb2Nlc3MgfAogICAgICAgICAgICBTb3J0LU9iamVjdCBXb3JraW5nU2V0NjQgLURlc2NlbmRpbmcgfAogICAgICAgICAgICBTZWxlY3QtT2JqZWN0IC1GaXJzdCAkY291bnQgTmFtZSwKICAgICAgICAgICAgICAgIEB7Tj0iVmFsdWUiOyBFPXsgW01hdGhdOjpSb3VuZCgkXy5Xb3JraW5nU2V0NjQgLyAxTUIsIDApLlRvU3RyaW5nKCkgKyAiIE1CIiB9fQogICAgfQp9CgpmdW5jdGlvbiBHZXQtRGlza0luZm8gewogICAgJGRpc2tzID0gQCgpCiAgICBmb3JlYWNoICgkZCBpbiAoR2V0LVBTRHJpdmUgLVBTUHJvdmlkZXIgRmlsZVN5c3RlbSAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSkpIHsKICAgICAgICBpZiAoJGQuVXNlZCAtbmUgJG51bGwgLWFuZCAoJGQuVXNlZCArICRkLkZyZWUpIC1ndCAwKSB7CiAgICAgICAgICAgICR0b3RhbCA9ICRkLlVzZWQgKyAkZC5GcmVlCiAgICAgICAgICAgICRwY3QgICA9IFtNYXRoXTo6Um91bmQoKCRkLlVzZWQgLyAkdG90YWwpICogMTAwKQogICAgICAgICAgICAkZGlza3MgKz0gW1BTQ3VzdG9tT2JqZWN0XUB7CiAgICAgICAgICAgICAgICBOYW1lICA9ICRkLk5hbWUgKyAiOiIKICAgICAgICAgICAgICAgIFVzZWQgID0gW01hdGhdOjpSb3VuZCgkZC5Vc2VkIC8gMUdCLCAxKQogICAgICAgICAgICAgICAgVG90YWwgPSBbTWF0aF06OlJvdW5kKCR0b3RhbCAvIDFHQiwgMSkKICAgICAgICAgICAgICAgIFBjdCAgID0gJHBjdAogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQogICAgcmV0dXJuICRkaXNrcwp9CgpmdW5jdGlvbiBHZXQtTmV0U3RhdHMgewogICAgdHJ5IHsKICAgICAgICAkc3RhdHMgPSBHZXQtTmV0QWRhcHRlclN0YXRpc3RpY3MgLUVycm9yQWN0aW9uIFN0b3AgfAogICAgICAgICAgICBXaGVyZS1PYmplY3QgeyAkXy5SZWNlaXZlZEJ5dGVzIC1ndCAwIC1vciAkXy5TZW50Qnl0ZXMgLWd0IDAgfSB8CiAgICAgICAgICAgIFNlbGVjdC1PYmplY3QgLUZpcnN0IDEKICAgICAgICBpZiAoJHN0YXRzKSB7CiAgICAgICAgICAgIHJldHVybiBbUFNDdXN0b21PYmplY3RdQHsKICAgICAgICAgICAgICAgIFJlY3YgPSBbTWF0aF06OlJvdW5kKCRzdGF0cy5SZWNlaXZlZEJ5dGVzIC8gMU1CLCAxKQogICAgICAgICAgICAgICAgU2VudCA9IFtNYXRoXTo6Um91bmQoJHN0YXRzLlNlbnRCeXRlcyAvIDFNQiwgMSkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0gY2F0Y2gge30KICAgIHJldHVybiAkbnVsbAp9CgpmdW5jdGlvbiBHZXQtUG93ZXJQbGFuTmFtZSB7CiAgICB0cnkgewogICAgICAgICRsaW5lID0gcG93ZXJjZmcgL2dldGFjdGl2ZXNjaGVtZSAyPiRudWxsCiAgICAgICAgaWYgKCRsaW5lIC1tYXRjaCAiUG93ZXIgU2NoZW1lIEdVSUQuKlwoKC4rKVwpIikgeyByZXR1cm4gJE1hdGNoZXNbMV0uVHJpbSgpIH0KICAgIH0gY2F0Y2gge30KICAgIHJldHVybiAiVW5rbm93biIKfQoKZnVuY3Rpb24gR2V0LVVwdGltZVN0ciB7CiAgICAkdXAgPSAoR2V0LURhdGUpIC0gKGdjaW0gV2luMzJfT3BlcmF0aW5nU3lzdGVtKS5MYXN0Qm9vdFVwVGltZQogICAgcmV0dXJuICIkKCR1cC5EYXlzKWQgJCgkdXAuSG91cnMpaCAkKCR1cC5NaW51dGVzKW0iCn0KCmZ1bmN0aW9uIEdldC1TdGFydHVwQ291bnQgewogICAgJGNvdW50ID0gMAogICAgdHJ5IHsKICAgICAgICAkaGtjdSA9IEdldC1JdGVtUHJvcGVydHkgIkhLQ1U6XFNvZnR3YXJlXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biIgLUVBIFN0b3AKICAgICAgICAkY291bnQgKz0gKCRoa2N1LlBTT2JqZWN0LlByb3BlcnRpZXMgfCBXaGVyZS1PYmplY3QgeyAkXy5OYW1lIC1ub3RtYXRjaCAiXlBTIiB9KS5Db3VudAogICAgfSBjYXRjaCB7fQogICAgdHJ5IHsKICAgICAgICAkaGtsbSA9IEdldC1JdGVtUHJvcGVydHkgIkhLTE06XFNvZnR3YXJlXE1pY3Jvc29mdFxXaW5kb3dzXEN1cnJlbnRWZXJzaW9uXFJ1biIgLUVBIFN0b3AKICAgICAgICAkY291bnQgKz0gKCRoa2xtLlBTT2JqZWN0LlByb3BlcnRpZXMgfCBXaGVyZS1PYmplY3QgeyAkXy5OYW1lIC1ub3RtYXRjaCAiXlBTIiB9KS5Db3VudAogICAgfSBjYXRjaCB7fQogICAgcmV0dXJuICRjb3VudAp9CgpmdW5jdGlvbiBTaG93LURhc2hib2FyZCB7CiAgICAkb3MgID0gZ2NpbSBXaW4zMl9PcGVyYXRpbmdTeXN0ZW0KICAgICRjcHUgPSBnY2ltIFdpbjMyX1Byb2Nlc3NvcgoKICAgIHRyeSB7CiAgICAgICAgJGNwdUxvYWQgPSBbTWF0aF06OlJvdW5kKChHZXQtQ291bnRlciAnXFByb2Nlc3NvcihfVG90YWwpXCUgUHJvY2Vzc29yIFRpbWUnIC1TYW1wbGVJbnRlcnZhbCAxIC1NYXhTYW1wbGVzIDEpLkNvdW50ZXJTYW1wbGVzLkNvb2tlZFZhbHVlKQogICAgfSBjYXRjaCB7ICRjcHVMb2FkID0gMCB9CgogICAgJHJhbVRvdGFsID0gW01hdGhdOjpSb3VuZCgkb3MuVG90YWxWaXNpYmxlTWVtb3J5U2l6ZSAvIDFNQiwgMSkKICAgICRyYW1GcmVlICA9IFtNYXRoXTo6Um91bmQoJG9zLkZyZWVQaHlzaWNhbE1lbW9yeSAvIDFNQiwgMSkKICAgICRyYW1Vc2VkICA9IFtNYXRoXTo6Um91bmQoJHJhbVRvdGFsIC0gJHJhbUZyZWUsIDEpCiAgICAkcmFtUGN0ICAgPSBbTWF0aF06OlJvdW5kKCgkcmFtVXNlZCAvICRyYW1Ub3RhbCkgKiAxMDApCgogICAgJGRpc2tzICAgICA9IEdldC1EaXNrSW5mbwogICAgJG5ldCAgICAgICA9IEdldC1OZXRTdGF0cwogICAgJHBvd2VyUGxhbiA9IEdldC1Qb3dlclBsYW5OYW1lCiAgICAkdXB0aW1lICAgID0gR2V0LVVwdGltZVN0cgogICAgJHN0YXJ0dXBzICA9IEdldC1TdGFydHVwQ291bnQKICAgICR0b3BDUFUgICAgPSBHZXQtVG9wUHJvY2Vzc2VzICJDUFUiIDUKICAgICR0b3BSQU0gICAgPSBHZXQtVG9wUHJvY2Vzc2VzICJSQU0iIDUKCiAgICBDbGVhci1Ib3N0CiAgICBXcml0ZS1Ib3N0ICIiCiAgICBXcml0ZS1Ib3N0ICIgICAgICAgICAgICAgICAgID09PT09PT09PT09PT09PT09PT09PT0gU1lTVEVNIElORk8gPT09PT09PT09PT09PT09PT09PT09PSIgLUZvcmVncm91bmRDb2xvciBEYXJrR3JheQogICAgV3JpdGUtSG9zdCAoIiAgICAgICAgICAgICAgICAgIiArIChHZXQtRGF0ZSAtRm9ybWF0ICJkZGRkLCBNTU1NIGRkIHl5eXkgIHwgIEhIOm1tOnNzIikpIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgIFdyaXRlLUhvc3QgIiIKCiAgICAkbWFjaGluZU5hbWUgPSAkZW52OkNPTVBVVEVSTkFNRQogICAgJG9zTmFtZSAgICAgID0gJG9zLkNhcHRpb24gLXJlcGxhY2UgIk1pY3Jvc29mdCBXaW5kb3dzICIsICJXaW4gIgogICAgJGNwdU5hbWUgICAgID0gKCRjcHUuTmFtZSAtcmVwbGFjZSAiXHMrIiwgIiAiKS5UcmltKCkKICAgIGlmICgkY3B1TmFtZS5MZW5ndGggLWd0IDQ4KSB7ICRjcHVOYW1lID0gJGNwdU5hbWUuU3Vic3RyaW5nKDAsNDgpICsgIi4uLiIgfQoKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgIiAtTm9OZXdsaW5lCiAgICBXcml0ZS1Ib3N0ICRtYWNoaW5lTmFtZSAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgQ3lhbgogICAgV3JpdGUtSG9zdCAiICB8ICAiIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciBEYXJrR3JheQogICAgV3JpdGUtSG9zdCAkb3NOYW1lIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgV3JpdGUtSG9zdCAiICB8ICBVcHRpbWU6ICIgLU5vTmV3bGluZSAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5CiAgICBXcml0ZS1Ib3N0ICR1cHRpbWUgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgV3JpdGUtSG9zdCAiICAgICAgICAgICAgICAgICAkY3B1TmFtZSIgLUZvcmVncm91bmRDb2xvciBEYXJrR3JheQogICAgV3JpdGUtSG9zdCAiIgoKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgQ1BVICAiIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgR2V0LUJhclN0cmluZyAkY3B1TG9hZCAxMDAgMzAKICAgIFdyaXRlLUhvc3QgIiRjcHVMb2FkJSIgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgV3JpdGUtSG9zdCAiIgoKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgUkFNICAiIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgR2V0LUJhclN0cmluZyAkcmFtUGN0IDEwMCAzMAogICAgV3JpdGUtSG9zdCAiJHJhbVVzZWQgLyAkcmFtVG90YWwgR0IgICgkcmFtUGN0JSkiIC1Gb3JlZ3JvdW5kQ29sb3IgV2hpdGUKICAgIFdyaXRlLUhvc3QgIiIKCiAgICBmb3JlYWNoICgkZCBpbiAkZGlza3MpIHsKICAgICAgICAkbGFiZWwgPSAoIiAgJCgkZC5OYW1lKSAgIikuUGFkTGVmdCg4KQogICAgICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAkbGFiZWwiIC1Ob05ld2xpbmUgLUZvcmVncm91bmRDb2xvciBXaGl0ZQogICAgICAgIEdldC1CYXJTdHJpbmcgJGQuUGN0IDEwMCAzMAogICAgICAgIFdyaXRlLUhvc3QgIiQoJGQuVXNlZCkgLyAkKCRkLlRvdGFsKSBHQiAgKCQoJGQuUGN0KSUpIiAtRm9yZWdyb3VuZENvbG9yIFdoaXRlCiAgICB9CiAgICBXcml0ZS1Ib3N0ICIiCgogICAgV3JpdGUtSG9zdCAiICAgICAgICAgICAgICAgICBQb3dlciBQbGFuIDogIiAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgICRwcENvbG9yID0gaWYgKCRwb3dlclBsYW4gLW1hdGNoICJIaWdoIikgeyAiR3JlZW4iIH0gZWxzZWlmICgkcG93ZXJQbGFuIC1tYXRjaCAiQmFsYW5jZWQiKSB7ICJZZWxsb3ciIH0gZWxzZSB7ICJEYXJrR3JheSIgfQogICAgV3JpdGUtSG9zdCAkcG93ZXJQbGFuIC1Gb3JlZ3JvdW5kQ29sb3IgJHBwQ29sb3IKCiAgICBpZiAoJG5ldCkgewogICAgICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgTmV0d29yayAgICA6ICIgLU5vTmV3bGluZSAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5CiAgICAgICAgV3JpdGUtSG9zdCAiUmVjdiAkKCRuZXQuUmVjdikgTUIgIHwgIFNlbnQgJCgkbmV0LlNlbnQpIE1CICAoc2Vzc2lvbiB0b3RhbHMpIiAtRm9yZWdyb3VuZENvbG9yIFdoaXRlCiAgICB9CgogICAgV3JpdGUtSG9zdCAiICAgICAgICAgICAgICAgICBTdGFydHVwcyAgIDogIiAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgICRzY0NvbG9yID0gaWYgKCRzdGFydHVwcyAtZ3QgMTApIHsgIlJlZCIgfSBlbHNlaWYgKCRzdGFydHVwcyAtZ3QgNSkgeyAiWWVsbG93IiB9IGVsc2UgeyAiR3JlZW4iIH0KICAgIFdyaXRlLUhvc3QgIiRzdGFydHVwcyByZWdpc3RlcmVkIHN0YXJ0dXAgZW50cmllcyIgLUZvcmVncm91bmRDb2xvciAkc2NDb2xvcgoKICAgIFdyaXRlLUhvc3QgIiIKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgIFdyaXRlLUhvc3QgIiAgICAgICAgICAgICAgICAgVE9QIEJZIENQVSAgICAgICAgICAgICAgICAgICAgICAgICAgVE9QIEJZIFJBTSIgLUZvcmVncm91bmRDb2xvciBEYXJrR3JheQogICAgV3JpdGUtSG9zdCAiICAgICAgICAgICAgICAgICAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSIgLUZvcmVncm91bmRDb2xvciBEYXJrR3JheQoKICAgIGZvciAoJGkgPSAwOyAkaSAtbHQgNTsgJGkrKykgewogICAgICAgICRjUHJvYyAgID0gaWYgKCRpIC1sdCAkdG9wQ1BVLkNvdW50KSB7ICR0b3BDUFVbJGldIH0gZWxzZSB7ICRudWxsIH0KICAgICAgICAkclByb2MgICA9IGlmICgkaSAtbHQgJHRvcFJBTS5Db3VudCkgeyAkdG9wUkFNWyRpXSB9IGVsc2UgeyAkbnVsbCB9CiAgICAgICAgJGNOYW1lICAgPSBpZiAoJGNQcm9jKSB7ICRjUHJvYy5OYW1lLlN1YnN0cmluZygwLFtNYXRoXTo6TWluKCRjUHJvYy5OYW1lLkxlbmd0aCwxOCkpLlBhZFJpZ2h0KDE4KSB9IGVsc2UgeyAiIi5QYWRSaWdodCgxOCkgfQogICAgICAgICRjVmFsICAgID0gaWYgKCRjUHJvYykgeyAkY1Byb2MuVmFsdWUuUGFkTGVmdCgxMCkgfSBlbHNlIHsgIiIuUGFkTGVmdCgxMCkgfQogICAgICAgICRyTmFtZSAgID0gaWYgKCRyUHJvYykgeyAkclByb2MuTmFtZS5TdWJzdHJpbmcoMCxbTWF0aF06Ok1pbigkclByb2MuTmFtZS5MZW5ndGgsMTgpKS5QYWRSaWdodCgxOCkgfSBlbHNlIHsgIiIuUGFkUmlnaHQoMTgpIH0KICAgICAgICAkclZhbCAgICA9IGlmICgkclByb2MpIHsgJHJQcm9jLlZhbHVlLlBhZExlZnQoMTApIH0gZWxzZSB7ICIiLlBhZExlZnQoMTApIH0KCiAgICAgICAgV3JpdGUtSG9zdCAiICAgICAgICAgICAgICAgICAiIC1Ob05ld2xpbmUKICAgICAgICBXcml0ZS1Ib3N0ICRjTmFtZSAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgV2hpdGUKICAgICAgICBXcml0ZS1Ib3N0ICRjVmFsICAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgWWVsbG93CiAgICAgICAgV3JpdGUtSG9zdCAiICAgICIgIC1Ob05ld2xpbmUKICAgICAgICBXcml0ZS1Ib3N0ICRyTmFtZSAtTm9OZXdsaW5lIC1Gb3JlZ3JvdW5kQ29sb3IgV2hpdGUKICAgICAgICBXcml0ZS1Ib3N0ICRyVmFsICAtRm9yZWdyb3VuZENvbG9yIEN5YW4KICAgIH0KCiAgICBXcml0ZS1Ib3N0ICIiCiAgICBXcml0ZS1Ib3N0ICIgICAgICAgICAgICAgICAgID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09IiAtRm9yZWdyb3VuZENvbG9yIERhcmtHcmF5CiAgICBXcml0ZS1Ib3N0ICIgICAgICAgICAgICAgICAgIFIgPSBSZWZyZXNoICAgIFEgPSBCYWNrIFRvIE1lbnUiIC1Gb3JlZ3JvdW5kQ29sb3IgRGFya0dyYXkKICAgIFdyaXRlLUhvc3QgIiIKfQoKJHJ1bm5pbmcgPSAkdHJ1ZQp3aGlsZSAoJHJ1bm5pbmcpIHsKICAgIFNob3ctRGFzaGJvYXJkCiAgICAkd2FpdGVkID0gMAogICAgJGtleSAgICA9ICRudWxsCiAgICB3aGlsZSAoJHdhaXRlZCAtbHQgNTAwMCkgewogICAgICAgIGlmIChbQ29uc29sZV06OktleUF2YWlsYWJsZSkgeyAka2V5ID0gW0NvbnNvbGVdOjpSZWFkS2V5KCR0cnVlKTsgYnJlYWsgfQogICAgICAgIFN0YXJ0LVNsZWVwIC1NaWxsaXNlY29uZHMgMTAwCiAgICAgICAgJHdhaXRlZCArPSAxMDAKICAgIH0KICAgIGlmICgka2V5KSB7CiAgICAgICAgaWYgKCRrZXkuS2V5Q2hhci5Ub1N0cmluZygpLlRvVXBwZXIoKSAtZXEgIlEiKSB7ICRydW5uaW5nID0gJGZhbHNlIH0KICAgIH0KfQpXcml0ZS1Ib3N0ICIiCg==');[System.IO.File]::WriteAllBytes('%HK_PS_SI%',$b)"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%HK_PS_SI%"
+del "%HK_PS_SI%" >nul 2>&1
+call :log "System Info Panel closed"
+goto pause_return
+
+:: startup manager: toggle run keys and scheduled tasks
 :startup_manager
 call :log "Opened Startup Manager"
 set "HK_PS_TEMP=%HK_STATE%\hk_startup_mgr.ps1"
@@ -690,9 +644,7 @@ del "%HK_PS_TEMP%" >nul 2>&1
 call :log "Startup Manager session ended"
 goto pause_return
 
-:: ================================================================
-:: APPS MANAGER
-:: ================================================================
+:: apps manager: list installed apps and launch their uninstallers
 :apps_manager
 call :log "Opened Apps Manager"
 set "HK_PS_APPS=%HK_STATE%\hk_apps_mgr.ps1"
