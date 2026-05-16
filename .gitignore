@@ -1,0 +1,8 @@
+# VS Code temp file
+tempCodeRunnerFile.bat
+
+# HolmesKit generated files
+HolmesKit_Backups/
+
+# Log files
+*.log
