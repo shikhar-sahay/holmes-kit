@@ -2,7 +2,7 @@
 
 HolmesKit is a Windows optimization and maintenance toolkit built around a simple principle:
 
-Most systems are not underpowered — they are mismanaged, background-heavy, and poorly tuned.
+Most systems are not underpowered - they are mismanaged, background-heavy, and poorly tuned.
 
 HolmesKit is designed to improve responsiveness through **transparent, reversible, and user-confirmed system changes**, rather than aggressive or irreversible “tweak pack” behavior.
 

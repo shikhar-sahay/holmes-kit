@@ -1,4 +1,3 @@
-
 function Show-Header {
     Write-Host ""
     Write-Host "                 ======================== APPS MANAGER ========================" -ForegroundColor DarkGray
@@ -70,7 +69,7 @@ while ($running) {
                         Start-Process $Matches[1] -ArgumentList $Matches[2].Trim() -Wait
                     } else {
                         $parts = $u -split " ",2
-                        Start-Process $parts[0] -ArgumentList ($parts[1] ?? "") -Wait
+                        Start-Process $parts[0] -ArgumentList (if ($parts[1]) { $parts[1] } else { "" }) -Wait
                     }
                 }
             } catch {
