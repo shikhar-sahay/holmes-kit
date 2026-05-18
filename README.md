@@ -1,54 +1,280 @@
 # HolmesKit
 
-A Windows optimization toolkit that improves system responsiveness by removing the overhead Windows quietly runs in the background without asking.
+> A Windows optimization toolkit focused on improving responsiveness by removing unnecessary background overhead - transparently, reversibly, and without black-box tweaks.
 
-Most machines are not underpowered. They are just spending too much of their resources on themselves. HolmesKit fixes that through targeted, reversible, and fully transparent changes. Every option tells you exactly what it will do before it does anything.
-
----
-
-## What It Does
-
-Windows ships with defaults tuned for broad compatibility and battery life, not performance. Background services run constantly, startup programs accumulate, power settings throttle the CPU to save energy, and network settings prioritize stability over speed. None of this is malicious, but together it adds up to a machine that is quietly working against you.
-
-HolmesKit addresses this across four main areas:
-
-**Background Services**
-Three services that run continuously in the background are stopped and disabled: SysMain (which preloads apps into RAM and causes sustained disk activity), WSearch (which indexes your files constantly and hammers the disk, especially after fresh installs), and DiagTrack (Microsoft's telemetry service, which provides no user-facing functionality). Together these are responsible for a significant portion of idle CPU, RAM, and disk usage on a typical Windows machine.
-
-**Windows Registry**
-The registry is where Windows stores the configuration values that govern how the system behaves at a low level. HolmesKit writes to several key areas: `HKCU\Control Panel\Desktop` to reduce menu animation delay and give foreground processes longer CPU time slices via `Win32PrioritySeparation`, `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer` to disable taskbar and window animations, `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games` to raise GPU priority and set scheduling category to High for game threads via the Windows Multimedia Class Scheduler (MMCSS), and `HKCU\System\GameConfigStore` to disable Xbox Game DVR, which runs a background capture overlay even when you are not recording. All affected keys are exported before any changes are made and can be fully restored.
-
-**Power Plan**
-Windows defaults to Balanced power mode, which actively throttles CPU frequency during quieter periods to save energy. On a plugged-in machine this just means artificial performance limits. HolmesKit switches to High Performance using the `SCHEME_MIN` alias, with a GUID-based fallback for systems where the alias does not resolve. This removes those limits and lets the processor run at full capacity when needed.
-
-**TCP/IP Stack**
-A few network defaults that make sense for general use work against low-latency applications like gaming. HolmesKit makes the following changes via `netsh` and the registry: enables TCP Fast Open to reduce connection handshake overhead, enables RSS (Receive Side Scaling) to distribute network processing across CPU cores, disables TCP autotuning to fix the receive buffer at a smaller size for more consistent latency, and disables the Nagle algorithm by writing `TcpAckFrequency=1` and `TCPNoDelay=1` per network adapter. Nagle deliberately batches small packets to reduce network overhead, which helps for file transfers and actively hurts gaming where you want packets sent the moment they are ready. All TCP changes are fully reversed by the Restore menu.
+Most machines are not underpowered. They are simply spending too many resources on Windows itself. HolmesKit addresses that through targeted optimizations that are fully explained before anything changes.
 
 ---
 
-## Key Features
+# Table of Contents
 
-**Descriptive and intuitive by design.** Before any option runs, HolmesKit shows you a plain-English breakdown of exactly what it will change, which system components are affected, and what the tradeoffs are. Nothing happens silently and nothing requires you to trust a black box.
-
-**Nothing runs without your confirmation.** Every option requires an explicit Y before proceeding. The confirmation screen stays on screen long enough to read before you commit.
-
-**Full restore system.** Every change has a corresponding undo path. Registry keys are backed up before modification and reimported on restore. Services are re-enabled with correct start types. Power plan and network settings revert to Windows defaults.
-
-**Real-time System Info dashboard.** A live panel showing CPU load, RAM usage, disk usage per drive, current power plan, network activity, and the top processes by CPU and RAM. Refreshes every five seconds.
-
-**Startup Manager.** Shows every program configured to run at login, across both registry startup keys and Task Scheduler logon triggers, in a single unified list. Entries can be toggled on or off using the same `StartupApproved` key mechanism that Task Manager uses, so nothing is deleted outright. Protected system entries are detected at scan time and flagged as locked rather than silently failing when toggled.
-
-**Apps Manager.** Lists every installed application pulled from three registry hives (64-bit, 32-bit, and per-user) with version and size information. Selecting an application launches its own uninstaller with correct handling for both MSI and non-MSI uninstall strings.
-
-**Session logging.** Every action is timestamped and written to `HolmesKit_Backups\holmeskit.log` so you always know what ran and when across all sessions.
-
-**Apply All Tweaks.** A single guided pass that runs the full optimization sequence in one shot. Every step is listed with a description before anything begins, and the entire sequence is backed up before it runs.
+- [What It Does](#what-it-does)
+  - [Background Services](#background-services)
+  - [Windows Registry](#windows-registry)
+  - [Power Plan](#power-plan)
+  - [TCPIP Stack](#tcpip-stack)
+- [Key Features](#key-features)
+- [Menu Structure](#menu-structure)
+- [How to Use](#how-to-use)
+- [Recommended Usage](#recommended-usage)
+- [Things to Know](#things-to-know)
+- [Repository Structure](#repository-structure)
+- [License](#license)
 
 ---
 
-## Menu Structure
+# What It Does
 
+Windows ships with defaults tuned for broad compatibility, battery life, and general stability - not raw responsiveness. Over time, background services, startup tasks, telemetry, indexing, power throttling, and network buffering quietly accumulate overhead.
+
+HolmesKit targets these areas directly while ensuring every change remains reversible.
+
+---
+
+## Background Services
+
+HolmesKit stops and disables three constantly running background services:
+
+| Service | Purpose | Why Disable It |
+|---|---|---|
+| `SysMain` | Preloads applications into memory | Can cause sustained disk activity and unnecessary RAM usage |
+| `WSearch` | Indexes files for Windows Search | Constant indexing can heavily impact disk usage |
+| `DiagTrack` | Microsoft telemetry service | Provides no direct user-facing functionality |
+
+Together, these services are responsible for a significant portion of idle CPU, RAM, and disk activity on many Windows systems.
+
+---
+
+## Windows Registry
+
+HolmesKit applies targeted registry optimizations across several low-level Windows subsystems.
+
+### Desktop & UI Responsiveness
+
+Path:
+```reg
+HKCU\Control Panel\Desktop
 ```
+
+Changes include:
+
+- Reduced menu animation delay
+- Longer CPU time slices for foreground applications via:
+  ```reg
+  Win32PrioritySeparation
+  ```
+
+### Explorer & Animations
+
+Path:
+```reg
+HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer
+```
+
+Changes include:
+
+- Disabling taskbar animations
+- Disabling window transition animations
+
+### Gaming & MMCSS Scheduling
+
+Path:
+```reg
+HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games
+```
+
+Changes include:
+
+- Increased GPU priority
+- MMCSS scheduling category set to `High`
+
+This prioritizes game-related threads more aggressively.
+
+### Xbox Game DVR
+
+Path:
+```reg
+HKCU\System\GameConfigStore
+```
+
+Changes include:
+
+- Disabling Xbox Game DVR background capture
+
+Even when inactive, Game DVR can still maintain overlay-related processes in the background.
+
+### Backup & Restore
+
+Before any registry modification:
+
+- Existing keys are exported automatically
+- All changes can be fully restored later
+
+---
+
+## Power Plan
+
+Windows defaults to the **Balanced** power profile, which dynamically lowers CPU frequency during lighter workloads.
+
+HolmesKit switches the system to:
+
+```text
+High Performance (SCHEME_MIN)
+```
+
+If the alias fails to resolve, a GUID fallback is used automatically.
+
+### Result
+
+- Reduced CPU throttling
+- Faster frequency ramp-up
+- Improved responsiveness under load
+
+---
+
+## TCP/IP Stack
+
+HolmesKit applies several low-latency networking optimizations using `netsh` and registry edits.
+
+### Enabled
+
+- TCP Fast Open
+- RSS (Receive Side Scaling)
+
+### Disabled / Adjusted
+
+- TCP autotuning
+- Nagle algorithm via:
+  ```reg
+  TcpAckFrequency=1
+  TCPNoDelay=1
+  ```
+
+### Why It Matters
+
+Nagle batching improves efficiency for bulk transfers but increases latency for real-time applications like gaming.
+
+These changes prioritize:
+
+- Faster packet dispatch
+- Lower latency
+- More consistent response times
+
+All networking changes are fully reversible through the Restore menu.
+
+---
+
+# Key Features
+
+## Transparent by Design
+
+Every option includes:
+
+- A plain-English explanation
+- A breakdown of affected system components
+- Clear tradeoffs and side effects
+
+Nothing runs silently.
+
+---
+
+## Confirmation-Based Execution
+
+No tweak runs automatically.
+
+Every action requires explicit confirmation before execution.
+
+---
+
+## Full Restore System
+
+HolmesKit includes a complete rollback path:
+
+- Registry backups are restored automatically
+- Services are re-enabled with correct startup types
+- Power plans revert to defaults
+- Networking settings are restored
+
+---
+
+## Real-Time System Info Dashboard
+
+A live dashboard displaying:
+
+- CPU usage
+- RAM usage
+- Disk usage per drive
+- Current power plan
+- Network activity
+- Top processes by CPU and RAM usage
+
+Refresh interval:
+```text
+Every 5 seconds
+```
+
+---
+
+## Startup Manager
+
+HolmesKit scans:
+
+- Registry startup keys
+- Task Scheduler logon triggers
+
+Features include:
+
+- Unified startup list
+- Enable/disable toggles
+- `StartupApproved`-based management
+- Protected system entry detection
+
+No startup entries are deleted outright.
+
+---
+
+## Apps Manager
+
+Displays installed applications from:
+
+- 64-bit registry hive
+- 32-bit registry hive
+- Per-user registry hive
+
+Includes:
+
+- Version information
+- Reported application size
+- MSI and non-MSI uninstall handling
+
+---
+
+## Session Logging
+
+Every action is timestamped and logged to:
+
+```text
+HolmesKit_Backups\holmeskit.log
+```
+
+This provides a full audit trail across sessions.
+
+---
+
+## Apply All Tweaks
+
+Runs the complete optimization sequence in one guided pass.
+
+Before execution:
+
+- Every step is explained
+- The entire configuration is backed up
+
+---
+
+# Menu Structure
+
+```text
 [0] Apply All Tweaks
 [1] Core Optimization
 [2] Advanced Tweaks
@@ -62,53 +288,101 @@ A few network defaults that make sense for general use work against low-latency 
 
 ---
 
-## How to Use
+# How to Use
 
-1. Download or clone the repository
-2. Right-click `HolmesKit.bat` and select Run as Administrator
-3. Create a restore point when prompted (recommended)
-4. Pick an option from the menu
+## 1. Download or Clone the Repository
 
----
-
-## Recommended Usage
-
-- **Core Optimization** for a quick general cleanup
-- **Advanced Tweaks** for deeper system tuning
-- **Gaming Mode** before a gaming session
-- **Apply All Tweaks** for a full one-shot optimization pass
-- **Restore Defaults** if anything feels off afterward
-
----
-
-## A Few Things to Know
-
-- Disabling WSearch means Windows Search stops updating its index. File search may return stale results until the service is re-enabled via the Restore menu
-- TCP changes may reduce bulk download speeds as a tradeoff for lower latency
-- Some networking changes take full effect after a restart
-- The tool requires Administrator privileges to run
-
----
-
-## Repository Structure
-
+```bash
+git clone <repository-url>
 ```
+
+Or download the ZIP directly from GitHub.
+
+---
+
+## 2. Run HolmesKit as Administrator
+
+Right-click:
+
+```text
+HolmesKit.bat
+```
+
+Then select:
+
+```text
+Run as Administrator
+```
+
+---
+
+## 3. Create a Restore Point
+
+HolmesKit recommends creating a Windows restore point before applying changes.
+
+---
+
+## 4. Choose an Option
+
+Select the desired optimization module from the main menu.
+
+---
+
+# Recommended Usage
+
+| Option | Recommended Use |
+|---|---|
+| Core Optimization | General cleanup and responsiveness improvements |
+| Advanced Tweaks | Deeper low-level tuning |
+| Gaming Mode | Pre-gaming optimization pass |
+| Apply All Tweaks | Full optimization sequence |
+| Restore Defaults | Rollback and troubleshooting |
+
+---
+
+# Things to Know
+
+- Disabling `WSearch` stops live indexing updates
+- File search results may become stale until restored
+- TCP optimizations may reduce bulk download throughput
+- Some network changes require a restart
+- Administrator privileges are required
+
+---
+
+# Repository Structure
+
+```text
 HolmesKit/
-  HolmesKit.bat
-  modules/
-    logo.ps1
-    sysinfo.ps1
-    startup_mgr.ps1
-    apps_mgr.ps1
-  README.md
-  LICENSE
-  .gitattributes
-  .gitignore
-  HolmesKit_Backups/
+│
+├── HolmesKit.bat
+├── README.md
+├── LICENSE
+├── .gitattributes
+├── .gitignore
+│
+├── modules/
+│   ├── logo.ps1
+│   ├── sysinfo.ps1
+│   ├── startup_mgr.ps1
+│   └── apps_mgr.ps1
+│
+└── HolmesKit_Backups/
 ```
 
 ---
 
-## License
+# License
 
-MIT
+Recommended License:
+
+```text
+MIT License
+```
+
+Allows:
+
+- Open use
+- Modification
+- Redistribution
+- Attribution-based sharing
