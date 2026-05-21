@@ -54,10 +54,58 @@ powershell -NoProfile -Command ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
 set /p HK_CORE=  ^> 
-if "%HK_CORE%"=="1" call :confirm_run "Run Full Core Optimization" "Runs all core steps in sequence: temp cleanup, High Performance power plan, background app termination, and Explorer restart." "Affected: Temp folders, Power Plan, Background Processes, Explorer" & if "!HK_CONFIRMED!"=="1" call :run_full_core & goto pause_return
-if "%HK_CORE%"=="2" call :confirm_run "Cleanup Temp And Cache Files" "Deletes contents of %%TEMP%%, Windows Temp, INetCache, and GPU shader caches (NVIDIA DXCache, GLCache, D3DSCache). Also flushes the DNS resolver cache." "Affected: Temp folders, DNS Cache, GPU Shader Caches" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_temp & goto pause_return
-if "%HK_CORE%"=="3" call :confirm_run "Apply Power Plan Optimization" "Switches your active power plan to High Performance. This prevents the CPU from throttling down during load and removes artificial frequency limits." "Affected: Windows Power Plan (reversible via Restore menu)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :apply_power_plan & goto pause_return
-if "%HK_CORE%"=="4" call :confirm_run "Safe Background Cleanup" "Force-closes common background apps that consume RAM and CPU: OneDrive, Teams, Spotify, Discord, Epic Games, Battle.net, Adobe background services, and open browsers." "Affected: Running processes (apps can be reopened normally)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_background & goto pause_return
+set "HK_RETURN_MENU=core"
+if "%HK_CORE%"=="1" (
+  call :confirm_open "Run Full Core Optimization"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Runs all core steps in sequence: temp cleanup, High Performance' -ForegroundColor DarkGray;" ^
+    "Write-Host '  power plan, background app termination, and Explorer restart.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Temp folders, Power Plan, Background Processes, Explorer' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :run_full_core & goto pause_return
+  goto core_menu
+)
+if "%HK_CORE%"=="2" (
+  call :confirm_open "Cleanup Temp And Cache Files"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Deletes contents of %%TEMP%%, Windows Temp, INetCache, and GPU shader' -ForegroundColor DarkGray;" ^
+    "Write-Host '  caches (NVIDIA DXCache, GLCache, D3DSCache). Also flushes the DNS' -ForegroundColor DarkGray;" ^
+    "Write-Host '  resolver cache.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Temp folders, DNS Cache, GPU Shader Caches' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_temp & goto pause_return
+  goto core_menu
+)
+if "%HK_CORE%"=="3" (
+  call :confirm_open "Apply Power Plan Optimization"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Switches your active power plan to High Performance. This prevents' -ForegroundColor DarkGray;" ^
+    "Write-Host '  the CPU from throttling down during load and removes artificial' -ForegroundColor DarkGray;" ^
+    "Write-Host '  frequency limits.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Windows Power Plan (reversible via Restore menu)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :apply_power_plan & goto pause_return
+  goto core_menu
+)
+if "%HK_CORE%"=="4" (
+  call :confirm_open "Safe Background Cleanup"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Force-closes common background apps that consume RAM and CPU:' -ForegroundColor DarkGray;" ^
+    "Write-Host '  OneDrive, Teams, Spotify, Discord, Epic Games, Battle.net, Adobe' -ForegroundColor DarkGray;" ^
+    "Write-Host '  background services, and open browsers.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Running processes (apps can be reopened normally)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_background & goto pause_return
+  goto core_menu
+)
 if "%HK_CORE%"=="5" goto main_menu
 goto core_menu
 
@@ -78,12 +126,86 @@ powershell -NoProfile -Command ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
 set /p HK_ADV=  ^> 
-if "%HK_ADV%"=="1" call :confirm_run "UI Responsiveness Tweaks" "Reduces menu animation delay (100ms), lowers app hang timeout, sets foreground apps to receive longer CPU time slices (Win32PrioritySeparation), and disables NTFS Last Access timestamps to cut background disk I/O." "Affected: Registry (HKCU\Control Panel\Desktop), NTFS filesystem flags" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :ui_responsiveness_tweaks & goto pause_return
-if "%HK_ADV%"=="2" call :confirm_run "Visual Effects Performance Mode" "Disables window animations, taskbar animations, list-view shadows, and alpha selection effects. Sets Windows to Performance mode for visual effects. Noticeable on lower-end hardware." "Affected: Registry (HKCU Explorer\VisualEffects, WindowMetrics)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :visual_performance_mode & goto pause_return
-if "%HK_ADV%"=="3" call :confirm_run "Startup Pruning" "Removes startup registry entries for: OneDrive, Discord, Spotify, Skype, Zoom, Epic Games Launcher, Teams. These apps will no longer auto-launch at login. You can still open them manually." "Affected: Registry (HKCU\Run and HKLM\Run startup keys)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :startup_pruning & goto pause_return
-if "%HK_ADV%"=="4" call :confirm_run "Network Maintenance" "Flushes DNS cache, releases and renews your IP address, resets the Winsock catalog, and resets the TCP/IP stack. Useful if you are experiencing degraded network performance." "Affected: DNS Cache, IP Lease, Winsock, TCP/IP Stack (restart recommended)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :network_maintenance & goto pause_return
-if "%HK_ADV%"=="5" call :confirm_run "Background Services Cleanup" "Stops and disables three high-overhead background services: SysMain (Superfetch memory preloader), WSearch (Windows Search Indexer), and DiagTrack (Telemetry). Original service states are saved for restore." "Affected: SysMain, WSearch, DiagTrack services (restorable)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :services_cleanup & goto pause_return
-if "%HK_ADV%"=="6" call :confirm_run "Disable Hibernation" "Disables Windows hibernation and removes the hiberfil.sys file, which can be several GB on your system drive. Sleep mode is unaffected." "Affected: Hibernation state, hiberfil.sys (frees disk space)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :disable_hibernation & goto pause_return
+set "HK_RETURN_MENU=advanced"
+if "%HK_ADV%"=="1" (
+  call :confirm_open "UI Responsiveness Tweaks"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Reduces menu animation delay (100ms), lowers app hang timeout, sets' -ForegroundColor DarkGray;" ^
+    "Write-Host '  foreground apps to receive longer CPU time slices' -ForegroundColor DarkGray;" ^
+    "Write-Host '  (Win32PrioritySeparation), and disables NTFS Last Access timestamps' -ForegroundColor DarkGray;" ^
+    "Write-Host '  to cut background disk I/O.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Registry (HKCU\Control Panel\Desktop), NTFS flags' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :ui_responsiveness_tweaks & goto pause_return
+  goto advanced_menu
+)
+if "%HK_ADV%"=="2" (
+  call :confirm_open "Visual Effects Performance Mode"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Disables window animations, taskbar animations, list-view shadows,' -ForegroundColor DarkGray;" ^
+    "Write-Host '  and alpha selection effects. Sets Windows to Performance mode for' -ForegroundColor DarkGray;" ^
+    "Write-Host '  visual effects. Noticeable on lower-end hardware.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Registry (HKCU Explorer\VisualEffects, WindowMetrics)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :visual_performance_mode & goto pause_return
+  goto advanced_menu
+)
+if "%HK_ADV%"=="3" (
+  call :confirm_open "Startup Pruning"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Removes startup registry entries for: OneDrive, Discord, Spotify,' -ForegroundColor DarkGray;" ^
+    "Write-Host '  Skype, Zoom, Epic Games Launcher, Teams. These apps will no longer' -ForegroundColor DarkGray;" ^
+    "Write-Host '  auto-launch at login. You can still open them manually.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Registry (HKCU\Run and HKLM\Run startup keys)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :startup_pruning & goto pause_return
+  goto advanced_menu
+)
+if "%HK_ADV%"=="4" (
+  call :confirm_open "Network Maintenance"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Flushes DNS cache, releases and renews your IP address, resets the' -ForegroundColor DarkGray;" ^
+    "Write-Host '  Winsock catalog, and resets the TCP/IP stack. Useful if you are' -ForegroundColor DarkGray;" ^
+    "Write-Host '  experiencing degraded network performance.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: DNS Cache, IP Lease, Winsock, TCP/IP Stack (restart rec.)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :network_maintenance & goto pause_return
+  goto advanced_menu
+)
+if "%HK_ADV%"=="5" (
+  call :confirm_open "Background Services Cleanup"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Stops and disables three high-overhead background services: SysMain' -ForegroundColor DarkGray;" ^
+    "Write-Host '  (Superfetch memory preloader), WSearch (Windows Search Indexer),' -ForegroundColor DarkGray;" ^
+    "Write-Host '  and DiagTrack (Telemetry). Service states are saved for restore.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: SysMain, WSearch, DiagTrack services (restorable)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :services_cleanup & goto pause_return
+  goto advanced_menu
+)
+if "%HK_ADV%"=="6" (
+  call :confirm_open "Disable Hibernation"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Disables Windows hibernation and removes the hiberfil.sys file,' -ForegroundColor DarkGray;" ^
+    "Write-Host '  which can be several GB on your system drive. Sleep mode is' -ForegroundColor DarkGray;" ^
+    "Write-Host '  unaffected.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: Hibernation state, hiberfil.sys (frees disk space)' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :disable_hibernation & goto pause_return
+  goto advanced_menu
+)
 if "%HK_ADV%"=="7" goto main_menu
 goto advanced_menu
 
@@ -101,9 +223,46 @@ powershell -NoProfile -Command ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
 set /p HK_GAME=  ^> 
-if "%HK_GAME%"=="1" call :confirm_run "FPS Tweaks" "Disables Xbox Game DVR/capture overlay, sets GPU and I/O scheduling priority to High for game processes, sets SystemResponsiveness to 0 (dedicates multimedia scheduler fully to games), and applies High Performance power plan." "Affected: GameDVR registry keys, Multimedia Scheduler (MMCSS), Power Plan" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_fps_tweaks & goto pause_return
-if "%HK_GAME%"=="2" call :confirm_run "Latency Maintenance" "Flushes DNS, resets Winsock, enables TCP Fast Open and RSS (Receive Side Scaling), disables Nagle algorithm for lower latency, and pauses Windows Update delivery (BITS and DoSvc) during your session." "Affected: TCP/IP stack, Winsock, Windows Update delivery services" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_latency_maintenance & goto pause_return
-if "%HK_GAME%"=="3" call :confirm_run "Full Gaming Prep" "Runs FPS Tweaks and Latency Maintenance in sequence. Applies all gaming optimizations in one step." "Affected: All of the above combined" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_full_prep & goto pause_return
+set "HK_RETURN_MENU=gaming"
+if "%HK_GAME%"=="1" (
+  call :confirm_open "FPS Tweaks"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Disables Xbox Game DVR/capture overlay, sets GPU and I/O scheduling' -ForegroundColor DarkGray;" ^
+    "Write-Host '  priority to High for game processes, sets SystemResponsiveness to 0' -ForegroundColor DarkGray;" ^
+    "Write-Host '  (dedicates multimedia scheduler fully to games), and applies High' -ForegroundColor DarkGray;" ^
+    "Write-Host '  Performance power plan.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: GameDVR keys, Multimedia Scheduler (MMCSS), Power Plan' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_fps_tweaks & goto pause_return
+  goto gaming_menu
+)
+if "%HK_GAME%"=="2" (
+  call :confirm_open "Latency Maintenance"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Flushes DNS, resets Winsock, enables TCP Fast Open and RSS (Receive' -ForegroundColor DarkGray;" ^
+    "Write-Host '  Side Scaling), disables Nagle algorithm for lower latency, and' -ForegroundColor DarkGray;" ^
+    "Write-Host '  pauses Windows Update delivery (BITS and DoSvc) during your session.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: TCP/IP stack, Winsock, Windows Update delivery services' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_latency_maintenance & goto pause_return
+  goto gaming_menu
+)
+if "%HK_GAME%"=="3" (
+  call :confirm_open "Full Gaming Prep"
+  powershell -NoProfile -Command ^
+    "Write-Host '  What this does:' -ForegroundColor White;" ^
+    "Write-Host '  Runs FPS Tweaks and Latency Maintenance in sequence. Applies all' -ForegroundColor DarkGray;" ^
+    "Write-Host '  gaming optimizations in one step.' -ForegroundColor DarkGray;" ^
+    "Write-Host '';" ^
+    "Write-Host '  Affected: All of the above combined' -ForegroundColor Yellow;"
+  call :confirm_close
+  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_full_prep & goto pause_return
+  goto gaming_menu
+)
 if "%HK_GAME%"=="4" goto main_menu
 goto gaming_menu
 
@@ -139,11 +298,15 @@ echo.
 powershell -NoProfile -Command "Write-Host '  Done. Press any key to return to the menu...' -ForegroundColor Green"
 echo.
 pause >nul
+if "!HK_RETURN_MENU!"=="core"     goto core_menu
+if "!HK_RETURN_MENU!"=="advanced" goto advanced_menu
+if "!HK_RETURN_MENU!"=="gaming"   goto gaming_menu
+if "!HK_RETURN_MENU!"=="restore"  goto restore_menu
 goto main_menu
 
-:: show what an option does and confirm before running
-:: sets HK_CONFIRMED=1 if user says Y
-:confirm_run
+:: draws the confirm screen header for a given option title
+:: call :confirm_open "Title"
+:confirm_open
 set "HK_CONFIRMED=0"
 cls
 call :print_header
@@ -152,10 +315,10 @@ powershell -NoProfile -Command ^
   "Write-Host '  %~1' -ForegroundColor Cyan;" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-echo   What this does:
-echo   %~2
-echo.
-powershell -NoProfile -Command "Write-Host '  %~3' -ForegroundColor Yellow"
+exit /b 0
+
+:: draws the bottom divider, prompt, and sets HK_CONFIRMED
+:confirm_close
 echo.
 powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 echo.
@@ -436,7 +599,8 @@ powershell -NoProfile -Command "Write-Host '    [-] DiagTrack (Telemetry) stoppe
 echo.
 call :log "Background services cleanup complete"
 powershell -NoProfile -Command "Write-Host '  Background Services Cleanup Completed.' -ForegroundColor Green"
-powershell -NoProfile -Command "Write-Host '  Note: Windows Search will no longer index files. Re-enable via Restore menu.' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  Note: Windows Search will no longer index files.' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  Re-enable via the Restore menu.' -ForegroundColor DarkGray"
 echo.
 exit /b 0
 
@@ -602,9 +766,8 @@ powershell -NoProfile -Command ^
   "Write-Host '  Everything below runs in sequence. Read before continuing.' -ForegroundColor White;" ^
   "Write-Host '';" ^
   "Write-Host '  TEMP CLEANUP' -ForegroundColor Cyan;" ^
-  "Write-Host '    Deletes %TEMP%, Windows\Temp,' -ForegroundColor DarkGray;" ^
-  "Write-Host '    INetCache, and GPU shader caches (NVIDIA DXCache, GLCache, ' -ForegroundColor DarkGray;" ^
-  "Write-Host '    D3DSCache). Flushes DNS.' -ForegroundColor DarkGray;" ^
+  "Write-Host '    Deletes %TEMP%, Windows\Temp, INetCache, and GPU shader' -ForegroundColor DarkGray;" ^
+  "Write-Host '    caches (NVIDIA DXCache, GLCache, D3DSCache). Flushes DNS.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
   "Write-Host '  POWER PLAN' -ForegroundColor Cyan;" ^
   "Write-Host '    Switches to High Performance. Prevents CPU frequency' -ForegroundColor DarkGray;" ^
