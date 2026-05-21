@@ -13,21 +13,21 @@ call :startup_notice
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 ==============================================================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '0' -ForegroundColor Yellow -NoNewline; Write-Host ']  Apply All Tweaks' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Core Optimization' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Advanced Tweaks' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Gaming Mode' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Defaults' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  System Info' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Manager' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apps Manager' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '8' -ForegroundColor Red -NoNewline; Write-Host ']  Exit' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '0' -ForegroundColor Yellow -NoNewline; Write-Host ']  Apply All Tweaks' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Core Optimization' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Advanced Tweaks' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Gaming Mode' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Defaults' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  System Info' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Manager' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apps Manager' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '8' -ForegroundColor Red -NoNewline; Write-Host ']  Exit' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 ==============================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_MAIN=                   ^> 
+set /p HK_MAIN=  ^> 
 if "%HK_MAIN%"=="0" goto apply_all
 if "%HK_MAIN%"=="1" goto core_menu
 if "%HK_MAIN%"=="2" goto advanced_menu
@@ -43,17 +43,17 @@ goto main_menu
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 ================== CORE OPTIMIZATION ====================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  -------------------------- CORE OPTIMIZATION ---------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Run Full Core Optimization' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Cleanup Temp And Cache Files' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apply Power Plan Optimization' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Safe Background Cleanup' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Run Full Core Optimization' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Cleanup Temp And Cache Files' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Apply Power Plan Optimization' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Safe Background Cleanup' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 =========================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_CORE=                   ^> 
+set /p HK_CORE=  ^> 
 if "%HK_CORE%"=="1" call :confirm_run "Run Full Core Optimization" "Runs all core steps in sequence: temp cleanup, High Performance power plan, background app termination, and Explorer restart." "Affected: Temp folders, Power Plan, Background Processes, Explorer" & if "!HK_CONFIRMED!"=="1" call :run_full_core & goto pause_return
 if "%HK_CORE%"=="2" call :confirm_run "Cleanup Temp And Cache Files" "Deletes contents of %%TEMP%%, Windows Temp, INetCache, and GPU shader caches (NVIDIA DXCache, GLCache, D3DSCache). Also flushes the DNS resolver cache." "Affected: Temp folders, DNS Cache, GPU Shader Caches" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_temp & goto pause_return
 if "%HK_CORE%"=="3" call :confirm_run "Apply Power Plan Optimization" "Switches your active power plan to High Performance. This prevents the CPU from throttling down during load and removes artificial frequency limits." "Affected: Windows Power Plan (reversible via Restore menu)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :apply_power_plan & goto pause_return
@@ -65,19 +65,19 @@ goto core_menu
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 =================== ADVANCED TWEAKS =====================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  --------------------------- ADVANCED TWEAKS ----------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  UI Responsiveness Tweaks' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Visual Effects Performance Mode' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Pruning' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Network Maintenance' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  Background Services Cleanup' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Disable Hibernation' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  UI Responsiveness Tweaks' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Visual Effects Performance Mode' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Startup Pruning' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Network Maintenance' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  Background Services Cleanup' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Disable Hibernation' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 =========================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_ADV=                    ^> 
+set /p HK_ADV=  ^> 
 if "%HK_ADV%"=="1" call :confirm_run "UI Responsiveness Tweaks" "Reduces menu animation delay (100ms), lowers app hang timeout, sets foreground apps to receive longer CPU time slices (Win32PrioritySeparation), and disables NTFS Last Access timestamps to cut background disk I/O." "Affected: Registry (HKCU\Control Panel\Desktop), NTFS filesystem flags" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :ui_responsiveness_tweaks & goto pause_return
 if "%HK_ADV%"=="2" call :confirm_run "Visual Effects Performance Mode" "Disables window animations, taskbar animations, list-view shadows, and alpha selection effects. Sets Windows to Performance mode for visual effects. Noticeable on lower-end hardware." "Affected: Registry (HKCU Explorer\VisualEffects, WindowMetrics)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :visual_performance_mode & goto pause_return
 if "%HK_ADV%"=="3" call :confirm_run "Startup Pruning" "Removes startup registry entries for: OneDrive, Discord, Spotify, Skype, Zoom, Epic Games Launcher, Teams. These apps will no longer auto-launch at login. You can still open them manually." "Affected: Registry (HKCU\Run and HKLM\Run startup keys)" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :startup_pruning & goto pause_return
@@ -91,16 +91,16 @@ goto advanced_menu
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 ===================== GAMING MODE =======================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  ----------------------------- GAMING MODE ------------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  FPS Tweaks' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Latency Maintenance' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Full Gaming Prep' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  FPS Tweaks' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Latency Maintenance' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Full Gaming Prep' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 =========================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_GAME=                   ^> 
+set /p HK_GAME=  ^> 
 if "%HK_GAME%"=="1" call :confirm_run "FPS Tweaks" "Disables Xbox Game DVR/capture overlay, sets GPU and I/O scheduling priority to High for game processes, sets SystemResponsiveness to 0 (dedicates multimedia scheduler fully to games), and applies High Performance power plan." "Affected: GameDVR registry keys, Multimedia Scheduler (MMCSS), Power Plan" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_fps_tweaks & goto pause_return
 if "%HK_GAME%"=="2" call :confirm_run "Latency Maintenance" "Flushes DNS, resets Winsock, enables TCP Fast Open and RSS (Receive Side Scaling), disables Nagle algorithm for lower latency, and pauses Windows Update delivery (BITS and DoSvc) during your session." "Affected: TCP/IP stack, Winsock, Windows Update delivery services" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_latency_maintenance & goto pause_return
 if "%HK_GAME%"=="3" call :confirm_run "Full Gaming Prep" "Runs FPS Tweaks and Latency Maintenance in sequence. Applies all gaming optimizations in one step." "Affected: All of the above combined" & if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_full_prep & goto pause_return
@@ -111,19 +111,19 @@ goto gaming_menu
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 =================== RESTORE DEFAULTS ====================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  --------------------------- RESTORE DEFAULTS ---------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Latest Registry Backups' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Default Power Schemes' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Re-Enable Background Services' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Re-Enable Hibernation' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  Reset Network Stack' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restart Explorer' -ForegroundColor White;" ^
-  "Write-Host '                 [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '1' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Latest Registry Backups' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '2' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restore Default Power Schemes' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '3' -ForegroundColor Cyan -NoNewline; Write-Host ']  Re-Enable Background Services' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '4' -ForegroundColor Cyan -NoNewline; Write-Host ']  Re-Enable Hibernation' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '5' -ForegroundColor Cyan -NoNewline; Write-Host ']  Reset Network Stack' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '6' -ForegroundColor Cyan -NoNewline; Write-Host ']  Restart Explorer' -ForegroundColor White;" ^
+  "Write-Host '  [' -ForegroundColor DarkGray -NoNewline; Write-Host '7' -ForegroundColor Red -NoNewline; Write-Host ']  Back' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 =========================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_RESTORE=                ^> 
+set /p HK_RESTORE=  ^> 
 if "%HK_RESTORE%"=="1" call :restore_latest_registry & goto pause_return
 if "%HK_RESTORE%"=="2" call :restore_power_defaults & goto pause_return
 if "%HK_RESTORE%"=="3" call :restore_services & goto pause_return
@@ -148,18 +148,18 @@ set "HK_CONFIRMED=0"
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 ------------------------------------------------------' -ForegroundColor DarkGray;" ^
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '  %~1' -ForegroundColor Cyan;" ^
-  "Write-Host '                 ------------------------------------------------------' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
 echo   What this does:
 echo   %~2
 echo.
 powershell -NoProfile -Command "Write-Host '  %~3' -ForegroundColor Yellow"
 echo.
-powershell -NoProfile -Command "Write-Host '                 ------------------------------------------------------' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 echo.
-set /p HK_CONFIRM=                   Proceed? [Y/N]:  
+set /p HK_CONFIRM=  Proceed? [Y/N]:  
 if /I "!HK_CONFIRM!"=="Y" set "HK_CONFIRMED=1"
 echo.
 exit /b 0
@@ -216,9 +216,9 @@ echo     - Run optional gaming-focused optimizations
 echo.
 powershell -NoProfile -Command "Write-Host '  A restore point is strongly recommended before continuing.' -ForegroundColor Yellow"
 echo.
-powershell -NoProfile -Command "Write-Host '                 =========================================================' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 echo.
-set /p HK_RP=                   Create a restore point now? [Y/N]:  
+set /p HK_RP=  Create a restore point now? [Y/N]:  
 if /I "%HK_RP%"=="Y" call :create_restore_point
 exit /b 0
 
@@ -597,58 +597,59 @@ exit /b 0
 cls
 call :print_header
 powershell -NoProfile -Command ^
-  "Write-Host '                 ==================== APPLY ALL TWEAKS ===================' -ForegroundColor DarkGray;" ^
+  "Write-Host '  --------------------------- APPLY ALL TWEAKS ---------------------------' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 Everything below runs in sequence. Read before continuing.' -ForegroundColor White;" ^
+  "Write-Host '  Everything below runs in sequence. Read before continuing.' -ForegroundColor White;" ^
   "Write-Host '';" ^
-  "Write-Host '                 TEMP CLEANUP' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Deletes %TEMP%, Windows\Temp, INetCache, and GPU shader' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   caches (NVIDIA DXCache, GLCache, D3DSCache). Flushes DNS.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  TEMP CLEANUP' -ForegroundColor Cyan;" ^
+  "Write-Host '    Deletes %TEMP%, Windows\Temp,' -ForegroundColor DarkGray;" ^
+  "Write-Host '    INetCache, and GPU shader caches (NVIDIA DXCache, GLCache, ' -ForegroundColor DarkGray;" ^
+  "Write-Host '    D3DSCache). Flushes DNS.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 POWER PLAN' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Switches to High Performance. Prevents CPU frequency' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   throttling under load. Increases power draw on laptops.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  POWER PLAN' -ForegroundColor Cyan;" ^
+  "Write-Host '    Switches to High Performance. Prevents CPU frequency' -ForegroundColor DarkGray;" ^
+  "Write-Host '    throttling under load. Increases power draw on laptops.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 BACKGROUND APPS' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Force-closes: OneDrive, Teams, Spotify, Discord, Epic,' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   Battle.net, Adobe helpers, Chrome, Edge, Firefox.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  BACKGROUND APPS' -ForegroundColor Cyan;" ^
+  "Write-Host '    Force-closes: OneDrive, Teams, Spotify, Discord, Epic,' -ForegroundColor DarkGray;" ^
+  "Write-Host '    Battle.net, Adobe helpers, Chrome, Edge, Firefox.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 UI RESPONSIVENESS' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Menu delay 100ms. App hang timeout 4s. Foreground apps' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   get longer CPU slices (Win32PrioritySeparation=26).' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   NTFS last-access timestamps disabled (less disk I/O).' -ForegroundColor DarkGray;" ^
+  "Write-Host '  UI RESPONSIVENESS' -ForegroundColor Cyan;" ^
+  "Write-Host '    Menu delay 100ms. App hang timeout 4s. Foreground apps' -ForegroundColor DarkGray;" ^
+  "Write-Host '    get longer CPU slices (Win32PrioritySeparation=26).' -ForegroundColor DarkGray;" ^
+  "Write-Host '    NTFS last-access timestamps disabled (less disk I/O).' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 VISUAL EFFECTS' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Disables window/taskbar animations, list shadows, alpha' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   selection. Sets VisualFXSetting to Performance mode.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  VISUAL EFFECTS' -ForegroundColor Cyan;" ^
+  "Write-Host '    Disables window/taskbar animations, list shadows, alpha' -ForegroundColor DarkGray;" ^
+  "Write-Host '    selection. Sets VisualFXSetting to Performance mode.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 STARTUP PRUNING' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Removes Run key entries for OneDrive, Discord, Spotify,' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   Skype, Zoom, Epic, Teams. Apps still work manually.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  STARTUP PRUNING' -ForegroundColor Cyan;" ^
+  "Write-Host '    Removes Run key entries for OneDrive, Discord, Spotify,' -ForegroundColor DarkGray;" ^
+  "Write-Host '    Skype, Zoom, Epic, Teams. Apps still work manually.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 BACKGROUND SERVICES' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Stops + disables SysMain (Superfetch memory preloader),' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   WSearch (file indexer), DiagTrack (telemetry).' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   Restorable from Restore menu.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  BACKGROUND SERVICES' -ForegroundColor Cyan;" ^
+  "Write-Host '    Stops + disables SysMain (Superfetch memory preloader),' -ForegroundColor DarkGray;" ^
+  "Write-Host '    WSearch (file indexer), DiagTrack (telemetry).' -ForegroundColor DarkGray;" ^
+  "Write-Host '    Restorable from Restore menu.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 HIBERNATION' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Disabled. Removes hiberfil.sys (can be several GB).' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   Sleep mode is unaffected.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  HIBERNATION' -ForegroundColor Cyan;" ^
+  "Write-Host '    Disabled. Removes hiberfil.sys (can be several GB).' -ForegroundColor DarkGray;" ^
+  "Write-Host '    Sleep mode is unaffected.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 GAMING - FPS' -ForegroundColor Cyan;" ^
-  "Write-Host '                   Xbox Game DVR/capture off. MMCSS game thread priority' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   set to High. SystemResponsiveness=0. GPU Priority=8.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  GAMING - FPS' -ForegroundColor Cyan;" ^
+  "Write-Host '    Xbox Game DVR/capture off. MMCSS game thread priority' -ForegroundColor DarkGray;" ^
+  "Write-Host '    set to High. SystemResponsiveness=0. GPU Priority=8.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 GAMING - LATENCY' -ForegroundColor Cyan;" ^
-  "Write-Host '                   TCP Fast Open on. Nagle off per adapter. RSS on.' -ForegroundColor DarkGray;" ^
-  "Write-Host '                   TCP autotuning disabled. Windows Update delivery paused.' -ForegroundColor DarkGray;" ^
+  "Write-Host '  GAMING - LATENCY' -ForegroundColor Cyan;" ^
+  "Write-Host '    TCP Fast Open on. Nagle off per adapter. RSS on.' -ForegroundColor DarkGray;" ^
+  "Write-Host '    TCP autotuning disabled. Windows Update delivery paused.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '                 Registry backed up before anything runs. All reversible.' -ForegroundColor Yellow;" ^
-  "Write-Host '                 A restart is recommended after this completes.' -ForegroundColor Yellow;" ^
+  "Write-Host '  Registry backed up before anything runs. All reversible.' -ForegroundColor Yellow;" ^
+  "Write-Host '  A restart is recommended after this completes.' -ForegroundColor Yellow;" ^
   "Write-Host '';" ^
-  "Write-Host '                 =========================================================' -ForegroundColor DarkGray;"
+  "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_APPLYALL=                   Proceed? [Y/N]:  
+set /p HK_APPLYALL=  Proceed? [Y/N]:  
 if /I "!HK_APPLYALL!" NEQ "Y" goto main_menu
 echo.
 call :ensure_backup
@@ -663,9 +664,9 @@ call :disable_hibernation
 call :gaming_fps_tweaks
 call :gaming_latency_maintenance
 echo.
-powershell -NoProfile -Command "Write-Host '                 =========================================================' -ForegroundColor DarkGray"
-powershell -NoProfile -Command "Write-Host '                 All tweaks applied. Restart when ready.' -ForegroundColor Green"
-powershell -NoProfile -Command "Write-Host '                 Log: HolmesKit_Backups\holmeskit.log' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
+powershell -NoProfile -Command "Write-Host '  All tweaks applied. Restart when ready.' -ForegroundColor Green"
+powershell -NoProfile -Command "Write-Host '  Log: HolmesKit_Backups\holmeskit.log' -ForegroundColor DarkGray"
 call :log "Apply All completed"
 goto pause_return
 

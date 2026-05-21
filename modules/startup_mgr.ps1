@@ -1,10 +1,10 @@
 
 function Show-Header {
     Write-Host ""
-    Write-Host "                 ===================== STARTUP MANAGER =====================" -ForegroundColor DarkGray
-    Write-Host "                 Registry Run Keys + Task Scheduler (logon/boot triggers)" -ForegroundColor DarkGray
-    Write-Host "                 [LOCK] = protected by Windows, cannot be toggled here." -ForegroundColor DarkGray
-    Write-Host "                 ==========================================================" -ForegroundColor DarkGray
+    Write-Host "  --------------------------- STARTUP MANAGER ----------------------------" -ForegroundColor DarkGray
+    Write-Host "  Registry Run Keys + Task Scheduler (logon/boot triggers)" -ForegroundColor DarkGray
+    Write-Host "  [LOCK] = protected by Windows, cannot be toggled here." -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host ""
 }
 
@@ -131,7 +131,7 @@ function Show-Entries($entries) {
         $name = $e.Name.Substring(0, [Math]::Min($e.Name.Length, 32)).PadRight(32)
         $cmd  = $e.Command.Substring(0, [Math]::Min($e.Command.Length, 34))
 
-        Write-Host "                 [" -ForegroundColor DarkGray -NoNewline
+        Write-Host "  [" -ForegroundColor DarkGray -NoNewline
         Write-Host ("{0,2}" -f $i) -ForegroundColor Cyan -NoNewline
         Write-Host "] " -ForegroundColor DarkGray -NoNewline
         Write-Host "$statusTag " -ForegroundColor $statusColor -NoNewline
@@ -144,8 +144,8 @@ function Show-Entries($entries) {
 
 function Toggle-RegistryEntry($entry) {
     if ($entry.Locked) {
-        Write-Host "                 This entry is protected and cannot be toggled." -ForegroundColor DarkGray
-        Write-Host "                 You can remove it manually via Task Manager > Startup." -ForegroundColor DarkGray
+        Write-Host "  This entry is protected and cannot be toggled." -ForegroundColor DarkGray
+        Write-Host "  You can remove it manually via Task Manager > Startup." -ForegroundColor DarkGray
         return
     }
     $approvedPath = $entry.ApprovedPath
@@ -157,17 +157,17 @@ function Toggle-RegistryEntry($entry) {
         Set-ItemProperty -Path $approvedPath -Name $entry.Name -Value $bytes -Type Binary -ErrorAction Stop
         $msg = if ($entry.Status -eq "Enabled") { "Disabled" } else { "Enabled" }
         $col = if ($entry.Status -eq "Enabled") { "Yellow" } else { "Green" }
-        Write-Host "                 $msg`: $($entry.Name)" -ForegroundColor $col
+        Write-Host "  $msg`: $($entry.Name)" -ForegroundColor $col
     } catch {
-        Write-Host "                 Could not toggle $($entry.Name)." -ForegroundColor Red
-        Write-Host "                 Try disabling it via Task Manager > Startup tab instead." -ForegroundColor DarkGray
+        Write-Host "  Could not toggle $($entry.Name)." -ForegroundColor Red
+        Write-Host "  Try disabling it via Task Manager > Startup tab instead." -ForegroundColor DarkGray
     }
 }
 
 function Toggle-SchedulerEntry($entry) {
     if ($entry.Locked) {
-        Write-Host "                 This task is protected by Windows and cannot be toggled here." -ForegroundColor DarkGray
-        Write-Host "                 Path: $($entry.Hive)" -ForegroundColor DarkGray
+        Write-Host "  This task is protected by Windows and cannot be toggled here." -ForegroundColor DarkGray
+        Write-Host "  Path: $($entry.Hive)" -ForegroundColor DarkGray
         return
     }
     try {
@@ -175,15 +175,15 @@ function Toggle-SchedulerEntry($entry) {
         if (-not $taskPath.EndsWith("\")) { $taskPath = $taskPath + "\" }
         if ($entry.Status -eq "Enabled") {
             Disable-ScheduledTask -TaskName $entry.Name -TaskPath $taskPath -ErrorAction Stop | Out-Null
-            Write-Host "                 Disabled: $($entry.Name)" -ForegroundColor Yellow
+            Write-Host "  Disabled: $($entry.Name)" -ForegroundColor Yellow
         } else {
             Enable-ScheduledTask -TaskName $entry.Name -TaskPath $taskPath -ErrorAction Stop | Out-Null
-            Write-Host "                 Enabled: $($entry.Name)" -ForegroundColor Green
+            Write-Host "  Enabled: $($entry.Name)" -ForegroundColor Green
         }
     } catch {
-        Write-Host "                 Could not toggle: $($entry.Name)" -ForegroundColor Red
-        Write-Host "                 $($_.Exception.Message)" -ForegroundColor DarkGray
-        Write-Host "                 You can manage this via Task Scheduler (taskschd.msc)." -ForegroundColor DarkGray
+        Write-Host "  Could not toggle: $($entry.Name)" -ForegroundColor Red
+        Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray
+        Write-Host "  You can manage this via Task Scheduler (taskschd.msc)." -ForegroundColor DarkGray
     }
 }
 
@@ -191,23 +191,23 @@ $running = $true
 while ($running) {
     Clear-Host
     Show-Header
-    Write-Host "                 Scanning entries..." -ForegroundColor DarkGray
+    Write-Host "  Scanning entries..." -ForegroundColor DarkGray
     $allEntries = @()
     $allEntries += Get-RegistryStartups
     $allEntries += Get-SchedulerStartups
     Clear-Host
     Show-Header
     if ($allEntries.Count -eq 0) {
-        Write-Host "                 No startup entries found." -ForegroundColor DarkGray
+        Write-Host "  No startup entries found." -ForegroundColor DarkGray
     } else {
         Show-Entries $allEntries
     }
     Write-Host ""
-    Write-Host "                 ==========================================================" -ForegroundColor DarkGray
-    Write-Host "                 Enter a number to toggle. [LOCK] entries are read-only." -ForegroundColor DarkGray
-    Write-Host "                 0 = back." -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  Enter a number to toggle. [LOCK] entries are read-only." -ForegroundColor DarkGray
+    Write-Host "  0 = back." -ForegroundColor DarkGray
     Write-Host ""
-    $choice = Read-Host "                 > "
+    $choice = Read-Host "  > "
     if ($choice -eq "0" -or $choice -eq "") { $running = $false; break }
     $idx = $null
     if ([int]::TryParse($choice, [ref]$idx)) {
@@ -217,7 +217,7 @@ while ($running) {
             if ($entry.Type -eq "Registry") { Toggle-RegistryEntry $entry } else { Toggle-SchedulerEntry $entry }
             Start-Sleep -Milliseconds 1200
         } else {
-            Write-Host "                 Invalid number." -ForegroundColor Red
+            Write-Host "  Invalid number." -ForegroundColor Red
             Start-Sleep -Milliseconds 700
         }
     }

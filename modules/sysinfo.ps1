@@ -107,9 +107,9 @@ function Show-Dashboard {
 
     Clear-Host
     Write-Host ""
-    Write-Host "                 ====================== SYSTEM INFO ======================" -ForegroundColor DarkGray
-    Write-Host ("                 " + (Get-Date -Format "dddd, MMMM dd yyyy  |  HH:mm:ss")) -ForegroundColor DarkGray
-    Write-Host "                 ========================================================" -ForegroundColor DarkGray
+    Write-Host "  ----------------------------- SYSTEM INFO ------------------------------" -ForegroundColor DarkGray
+    Write-Host ("  " + (Get-Date -Format "dddd, MMMM dd yyyy  |  HH:mm:ss")) -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host ""
 
     $machineName = $env:COMPUTERNAME
@@ -117,50 +117,50 @@ function Show-Dashboard {
     $cpuName     = ($cpu.Name -replace "\s+", " ").Trim()
     if ($cpuName.Length -gt 48) { $cpuName = $cpuName.Substring(0,48) + "..." }
 
-    Write-Host "                 " -NoNewline
+    Write-Host "  " -NoNewline
     Write-Host $machineName -NoNewline -ForegroundColor Cyan
     Write-Host "  |  " -NoNewline -ForegroundColor DarkGray
     Write-Host $osName -NoNewline -ForegroundColor White
     Write-Host "  |  Uptime: " -NoNewline -ForegroundColor DarkGray
     Write-Host $uptime -ForegroundColor White
-    Write-Host "                 $cpuName" -ForegroundColor DarkGray
+    Write-Host "  $cpuName" -ForegroundColor DarkGray
     Write-Host ""
 
-    Write-Host "                 CPU  " -NoNewline -ForegroundColor White
+    Write-Host "  CPU  " -NoNewline -ForegroundColor White
     Get-BarString $cpuLoad 100 30
     Write-Host "$cpuLoad%" -ForegroundColor White
     Write-Host ""
 
-    Write-Host "                 RAM  " -NoNewline -ForegroundColor White
+    Write-Host "  RAM  " -NoNewline -ForegroundColor White
     Get-BarString $ramPct 100 30
     Write-Host "$ramUsed / $ramTotal GB  ($ramPct%)" -ForegroundColor White
     Write-Host ""
 
     foreach ($d in $disks) {
         $label = ("  $($d.Name)  ").PadLeft(8)
-        Write-Host "                $label" -NoNewline -ForegroundColor White
+        Write-Host "  $label" -NoNewline -ForegroundColor White
         Get-BarString $d.Pct 100 30
         Write-Host "$($d.Used) / $($d.Total) GB  ($($d.Pct)%)" -ForegroundColor White
     }
     Write-Host ""
 
-    Write-Host "                 Power Plan : " -NoNewline -ForegroundColor DarkGray
+    Write-Host "  Power Plan : " -NoNewline -ForegroundColor DarkGray
     $ppColor = if ($powerPlan -match "High") { "Green" } elseif ($powerPlan -match "Balanced") { "Yellow" } else { "DarkGray" }
     Write-Host $powerPlan -ForegroundColor $ppColor
 
     if ($net) {
-        Write-Host "                 Network    : " -NoNewline -ForegroundColor DarkGray
+        Write-Host "  Network    : " -NoNewline -ForegroundColor DarkGray
         Write-Host "Recv $($net.Recv) MB  |  Sent $($net.Sent) MB  (session totals)" -ForegroundColor White
     }
 
-    Write-Host "                 Startups   : " -NoNewline -ForegroundColor DarkGray
+    Write-Host "  Startups   : " -NoNewline -ForegroundColor DarkGray
     $scColor = if ($startups -gt 10) { "Red" } elseif ($startups -gt 5) { "Yellow" } else { "Green" }
     Write-Host "$startups registered startup entries" -ForegroundColor $scColor
 
     Write-Host ""
-    Write-Host "                 --------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "                 TOP BY CPU                          TOP BY RAM" -ForegroundColor DarkGray
-    Write-Host "                 --------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  TOP BY CPU                          TOP BY RAM" -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
 
     for ($i = 0; $i -lt 5; $i++) {
         $cProc   = if ($i -lt $topCPU.Count) { $topCPU[$i] } else { $null }
@@ -170,7 +170,7 @@ function Show-Dashboard {
         $rName   = if ($rProc) { $rProc.Name.Substring(0,[Math]::Min($rProc.Name.Length,18)).PadRight(18) } else { "".PadRight(18) }
         $rVal    = if ($rProc) { $rProc.Value.PadLeft(10) } else { "".PadLeft(10) }
 
-        Write-Host "                 " -NoNewline
+        Write-Host "  " -NoNewline
         Write-Host $cName -NoNewline -ForegroundColor White
         Write-Host $cVal  -NoNewline -ForegroundColor Yellow
         Write-Host "    "  -NoNewline
@@ -179,8 +179,8 @@ function Show-Dashboard {
     }
 
     Write-Host ""
-    Write-Host "                 ========================================================" -ForegroundColor DarkGray
-    Write-Host "                 R = Refresh    Q = Back To Menu" -ForegroundColor DarkGray
+    Write-Host "  ------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  R = Refresh    Q = Back To Menu" -ForegroundColor DarkGray
     Write-Host ""
 }
 
