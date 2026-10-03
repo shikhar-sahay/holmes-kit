@@ -124,7 +124,7 @@
           <DockPanel><Button DockPanel.Dock="Right" Content="Cancel running command" Command="{Binding CancelCommand}" /><StackPanel><TextBlock Text="Activity &amp; Logs" Style="{StaticResource PageTitle}" /><TextBlock Text="Live command feedback and the latest 500 lines of HolmesKit's shared log." Style="{StaticResource PageSubtitle}" /></StackPanel></DockPanel>
           <ListBox Grid.Row="1" ItemsSource="{Binding Activity}" Background="{StaticResource PanelBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="#303642" Padding="8" />
           <DockPanel Grid.Row="2" Margin="0,14,0,8"><Button DockPanel.Dock="Right" Content="Open log folder" Command="{Binding OpenLogFolderCommand}" Margin="8,0,0,0" /><Button DockPanel.Dock="Right" Content="Reload log" Command="{Binding RefreshLogsCommand}" /><TextBlock Text="Session log" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" /></DockPanel>
-          <TextBox Grid.Row="3" Text="{Binding LogText}" IsReadOnly="True" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Cascadia Mono, Consolas" FontSize="12" Background="#0E1014" Foreground="#CFD5DF" BorderBrush="#303642" Padding="10" />
+          <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Cascadia Mono, Consolas" FontSize="12" Background="#0E1014" Foreground="#CFD5DF" BorderBrush="#303642" Padding="10" />
         </Grid>
       </TabItem>
     </TabControl>
