@@ -1,3 +1,4 @@
+using System.Globalization;
 using HolmesKit.Desktop.Services;
 
 namespace HolmesKit.Desktop.Tests;
@@ -49,6 +50,21 @@ public class CommandServiceTests
         var service = new HolmesKitCommandService(runner, new FakePaths(@"C:\Holmes Kit"));
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetApplicationsAsync(TestContext.Current.CancellationToken));
         Assert.Contains("Access denied", error.Message);
+    }
+
+    [Fact]
+    public async Task StructuredNumbers_ParseIndependentlyOfCurrentCulture()
+    {
+        var prior = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            var runner = new FakeRunner { Result = new ProcessResult(0, "{\"MemoryPercent\":86.55842748642033,\"PowerPlanKind\":\"Custom\",\"PowerPlanName\":\"Work plan\"}", "") };
+            var snapshot = await new HolmesKitCommandService(runner, new FakePaths(@"C:\Holmes Kit")).GetSystemInfoAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(86.55842748642033, snapshot.MemoryPercent);
+            Assert.Equal("Custom power plan", snapshot.PowerPlanDisplay);
+        }
+        finally { CultureInfo.CurrentCulture = prior; }
     }
 
     private sealed class FakeRunner : IProcessRunner

@@ -16,7 +16,7 @@ public sealed class MainViewModel : ObservableObject
     private CancellationTokenSource? operationCancellation;
     private bool isBusy;
     private string status = "Ready";
-    private string operationTitle = "No operation running";
+    private string operationTitle = "";
     private SystemSnapshot system = new();
     private StartupEntry? selectedStartup;
     private InstalledApplication? selectedApplication;
@@ -25,14 +25,16 @@ public sealed class MainViewModel : ObservableObject
     private string logText = "No log has been created yet.";
     private string backupStatus = "Checking backup...";
     private string backupTimestamp = "";
+    private string backupDetails = "";
     private bool hasBackup;
     private int selectedPageIndex;
+    private int statusRevision;
 
     public MainViewModel(IHolmesKitCommandService service, IHolmesKitPathResolver paths)
     {
         this.service = service;
         this.paths = paths;
-        RunOperationCommand = new AsyncRelayCommand(RunOperationAsync, p => p is OperationDefinition && !IsBusy);
+        RunOperationCommand = new AsyncRelayCommand(RunOperationAsync, p => p is OperationDefinition operation && !IsBusy && (operation.Id != "restore-registry" || HasBackup));
         RefreshSystemCommand = new AsyncRelayCommand(_ => RefreshSystemAsync(), _ => !IsBusy);
         RefreshStartupCommand = new AsyncRelayCommand(_ => RefreshStartupAsync(), _ => !IsBusy);
         ToggleStartupCommand = new AsyncRelayCommand(ToggleStartupAsync, p => p is StartupEntry { Locked: false } && !IsBusy);
@@ -86,8 +88,10 @@ public sealed class MainViewModel : ObservableObject
         }
     }
     public string ElevationText => IsAdministrator ? "Administrator" : "Not elevated";
-    public bool IsBusy { get => isBusy; private set { if (Set(ref isBusy, value)) RefreshCommandStates(); } }
-    public string Status { get => status; private set => Set(ref status, value); }
+    public bool IsBusy { get => isBusy; private set { if (Set(ref isBusy, value)) { Raise(nameof(IsOperationVisible)); RefreshCommandStates(); } } }
+    public bool IsOperationVisible => IsBusy;
+    public bool IsStatusVisible => Status != "Ready";
+    public string Status { get => status; private set { if (Set(ref status, value)) Raise(nameof(IsStatusVisible)); } }
     public string OperationTitle { get => operationTitle; private set => Set(ref operationTitle, value); }
     public SystemSnapshot System { get => system; private set => Set(ref system, value); }
     public StartupEntry? SelectedStartup { get => selectedStartup; set => Set(ref selectedStartup, value); }
@@ -98,6 +102,7 @@ public sealed class MainViewModel : ObservableObject
     public string LogText { get => logText; private set => Set(ref logText, value); }
     public string BackupStatus { get => backupStatus; private set => Set(ref backupStatus, value); }
     public string BackupTimestamp { get => backupTimestamp; private set => Set(ref backupTimestamp, value); }
+    public string BackupDetails { get => backupDetails; private set => Set(ref backupDetails, value); }
     public bool HasBackup { get => hasBackup; private set => Set(ref hasBackup, value); }
 
     public async Task InitializeAsync()
@@ -135,6 +140,7 @@ public sealed class MainViewModel : ObservableObject
     private async Task RefreshSystemAsync() => await WithBusyAsync("Refreshing system information", async token =>
     {
         System = await service.GetSystemInfoAsync(token);
+        foreach (var diagnostic in System.Diagnostics) AppendGuiLog($"System information unavailable: {diagnostic}");
         Status = "System information updated";
     }, showErrors: false);
 
@@ -198,14 +204,18 @@ public sealed class MainViewModel : ObservableObject
             AppendGuiLog($"{title} failed: {ex.Message}");
             if (showErrors) Notify?.Invoke("HolmesKit could not complete the operation", ex.Message, MessageBoxImage.Error);
         }
-        finally { operationCancellation.Dispose(); operationCancellation = null; IsBusy = false; }
+        finally
+        {
+            operationCancellation.Dispose(); operationCancellation = null; IsBusy = false; OperationTitle = "";
+            if (Status != "Ready") ResetStatusLater(Status, ++statusRevision);
+        }
     }
 
     private void RefreshLogs()
     {
         try
         {
-            if (!File.Exists(paths.LogFile)) { LogText = "No HolmesKit log has been created yet."; RecentActivity.Clear(); return; }
+            if (!File.Exists(paths.LogFile)) { LogText = "No HolmesKit log has been created yet."; RecentActivity.Clear(); RecentActivity.Add("No activity recorded yet."); return; }
             var lines = File.ReadLines(paths.LogFile).TakeLast(500);
             var materialized = lines.ToList();
             LogText = string.Join(Environment.NewLine, materialized);
@@ -248,19 +258,18 @@ public sealed class MainViewModel : ObservableObject
     private void UpdateBackupSummary()
     {
         var backup = Path.Combine(paths.RootDirectory, "HolmesKit_Backups", "latest");
-        try
-        {
-            var exists = Directory.Exists(backup) && Directory.EnumerateFiles(backup).Any();
-            HasBackup = exists;
-            BackupStatus = exists ? "Backup available" : "No backup detected";
-            BackupTimestamp = exists ? $"Updated {Directory.GetLastWriteTime(backup):MMM d, yyyy · h:mm tt}" : "Created automatically before optimization";
-        }
-        catch
-        {
-            HasBackup = false;
-            BackupStatus = "Backup status unavailable";
-            BackupTimestamp = "Check HolmesKit_Backups manually";
-        }
+        var inspection = BackupInspector.Inspect(backup);
+        HasBackup = inspection.IsValid;
+        BackupStatus = inspection.IsValid ? "Backup ready" : inspection.Exists ? "Backup incomplete" : "No backup yet";
+        BackupTimestamp = inspection.Timestamp is null ? "Created before the first optimization" : $"Last changed {inspection.Timestamp:MMM d, yyyy · h:mm tt}";
+        BackupDetails = inspection.Summary;
+        RefreshCommandStates();
+    }
+
+    private async void ResetStatusLater(string completedStatus, int revision)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(5));
+        if (!IsBusy && statusRevision == revision && Status == completedStatus) Status = "Ready";
     }
 
     private void AppendGuiLog(string message)
