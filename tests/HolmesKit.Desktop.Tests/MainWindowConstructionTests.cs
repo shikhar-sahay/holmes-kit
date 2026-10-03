@@ -54,6 +54,12 @@ public class MainWindowConstructionTests
                     PumpDispatcher();
                     window.UpdateLayout();
                     SaveScreenshot(window, Path.Combine(outputDirectory, "compact-01-core.png"));
+                    window.Width = 1600;
+                    window.Height = 900;
+                    pages.SelectedIndex = 7;
+                    PumpDispatcher();
+                    window.UpdateLayout();
+                    SaveScreenshot(window, Path.Combine(outputDirectory, "wide-07-system-info.png"));
                 }
                 else
                 {
