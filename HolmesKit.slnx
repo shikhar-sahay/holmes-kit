@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/HolmesKit.Desktop/HolmesKit.Desktop.csproj" />
+  <Project Path="tests/HolmesKit.Desktop.Tests/HolmesKit.Desktop.Tests.csproj" />
+</Solution>
