@@ -1,11 +1,11 @@
 # HolmesKit
 
-HolmesKit is a transparent, confirmation-based Windows optimization toolkit with two interfaces:
+HolmesKit is a transparent, confirmation-based Windows optimization toolkit with two supported interfaces:
 
-- **CLI:** `HolmesKit.bat`, the original standalone menu experience.
-- **Desktop:** `HolmesKit.exe`, a lightweight native Windows GUI built with C# and WPF.
+- **Desktop application:** `HolmesKit.exe`, a native Windows interface for reviewing, applying, and restoring changes.
+- **CLI:** `HolmesKit.bat`, the original standalone Batch/PowerShell menu.
 
-The desktop app is an additional frontend, not a replacement. System-changing GUI actions call the same Batch operations used by the CLI so the optimization logic does not drift into two implementations.
+Both interfaces use the same HolmesKit operations. The desktop application calls the established Batch entry points rather than maintaining a separate set of Windows modifications, and the CLI remains fully usable without the GUI.
 
 > HolmesKit changes Windows configuration. Save open work, review each confirmation, and keep a current backup. No performance outcome is guaranteed on every system.
 
@@ -41,7 +41,24 @@ The CLI remains independent of the GUI:
 
 Nothing in the CLI requires `HolmesKit.exe` or the .NET SDK. The Batch file also has a validated non-interactive entry point used by the desktop app: `HolmesKit.bat --run core-full`. Normal CLI use retains all interactive menus.
 
-## Use the desktop app
+## Desktop application
+
+The desktop application is a lightweight C#/WPF frontend for Windows 10 and Windows 11. It starts with administrator privileges because optimization and restore operations modify protected system configuration. Read-only data is collected in the background so the interface remains responsive.
+
+The interface includes:
+
+- **Home** — system, power-plan, backup, and recent-activity summary
+- **Core Optimization**, **Advanced Tweaks**, and **Gaming Mode** — operation groups with scope, restart guidance, and tradeoffs
+- **Apply All** — the complete existing HolmesKit sequence with one confirmation
+- **Startup Manager** — enabled-state management without deleting entries
+- **Applications Manager** — installed-program metadata and registered uninstallers
+- **System Information** — Windows, processor, memory, power, storage, and active-network details
+- **Restore** — validated backup restoration and Windows-default recovery actions
+- **Activity & Logs** — live command progress and the persistent audit log
+
+![HolmesKit Core Optimization](docs/screenshots/desktop-core.png)
+
+### Run a published build
 
 Keep this distribution layout together:
 
@@ -53,9 +70,9 @@ modules/
   ...
 ```
 
-Launch `HolmesKit.exe`. Windows requests administrator approval at startup. If UAC is declined, Windows cancels startup without making changes.
+Launch `HolmesKit.exe` from the published folder. Windows requests administrator approval at startup. If UAC is declined, Windows cancels startup without making changes.
 
-The app includes a compact Home summary; Core, Advanced, and Gaming pages; Apply All; protected-entry-aware Startup Manager; installed Applications Manager; on-demand System Information; prominent Restore actions; and live activity plus the shared log.
+Do not copy only the executable: the adjacent Batch file and `modules` directory are the shared HolmesKit engine.
 
 ## Build and test
 
@@ -65,6 +82,12 @@ From PowerShell in the repository root:
 dotnet restore HolmesKit.slnx
 dotnet build HolmesKit.slnx -c Release
 dotnet test HolmesKit.slnx -c Release --no-build
+```
+
+Run the source-built application with:
+
+```powershell
+dotnet run --project src\HolmesKit.Desktop\HolmesKit.Desktop.csproj -c Release
 ```
 
 ## Publish a portable folder
@@ -77,7 +100,7 @@ The app is emitted as one managed executable, while `HolmesKit.bat` and `modules
 
 ## Backup and restore
 
-Before optimization, HolmesKit creates its latest backup under `HolmesKit_Backups\latest`. Activity is appended to `HolmesKit_Backups\holmeskit.log`. This local machine state is excluded from Git.
+Before optimization, HolmesKit creates its latest backup under `HolmesKit_Backups\latest`. The desktop application verifies that every expected registry key has either a valid export or an explicit absent-key record before it enables registry restoration. An unrelated or partial file is not shown as a valid backup. Activity is appended to `HolmesKit_Backups\holmeskit.log`; all local machine state is excluded from Git.
 
 The Restore page exposes the same registry, power, service, hibernation, network, and Explorer actions as the CLI. Deleted temporary files are not recoverable, closed applications must be reopened, and third-party uninstall rollback belongs to that application's installer.
 
@@ -118,6 +141,8 @@ The Restore page exposes the same registry, power, service, hibernation, network
 
 `HolmesKitCommandService` is the GUI's single process boundary. It captures stdout, stderr, exit codes, progress lines, and cancellation. `gui_bridge.ps1` provides structured read/toggle/uninstall data for native tables while preserving the existing registry/task/uninstaller safety model.
 
+System information crosses the PowerShell boundary as JSON with raw byte counts, nullable measurements, uptime seconds, and explicit power-plan metadata. Formatting is handled by the desktop presentation layer so locale differences or unavailable values do not become misleading zeroes. Custom power-plan names are retained and identified as custom plans.
+
 See [the feature-parity audit](docs/feature-parity.md) for the source-derived operation inventory.
 
 ## Repository structure
@@ -128,6 +153,7 @@ modules/                          CLI modules and GUI data bridge
 src/HolmesKit.Desktop/            WPF desktop application
 tests/HolmesKit.Desktop.Tests/    safe tests
 docs/                             audit and architecture notes
+docs/screenshots/                 representative desktop screenshot
 HolmesKit_Backups/                generated local state (ignored)
 ```
 
@@ -136,4 +162,6 @@ HolmesKit_Backups/                generated local state (ignored)
 - The desktop publish target is Windows x64.
 - Privileged integration behavior must be validated on a disposable Windows test machine; automated tests never alter registry, services, networking, power plans, or installed applications.
 - HolmesKit retains the original latest-backup model rather than backup history.
+- Application sizes come from optional Windows uninstall-registry estimates. Missing values are shown as unavailable, and reported sizes may differ from actual disk usage.
+- CPU utilization is an on-demand Windows snapshot rather than continuous monitoring.
 - Windows editions and organization policies can reject individual service, TCP, power, or registry commands. Diagnostics remain visible and logged.
