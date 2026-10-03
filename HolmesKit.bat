@@ -2,11 +2,14 @@
 chcp 65001 >nul
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
+if /I "%~1"=="--run" set "HK_NONINTERACTIVE=1"
 title HolmesKit
-mode con: cols=110 lines=42
+if not defined HK_NONINTERACTIVE mode con: cols=110 lines=42
 
 call :require_admin
+if errorlevel 1 exit /b 1
 call :init_paths
+if /I "%~1"=="--run" goto command_dispatch
 call :startup_notice
 
 :main_menu
@@ -38,6 +41,110 @@ if "%HK_MAIN%"=="6" goto startup_manager
 if "%HK_MAIN%"=="7" goto apps_manager
 if "%HK_MAIN%"=="8" exit /b 0
 goto main_menu
+
+:: non-interactive entry point used by the desktop frontend
+:: Usage: HolmesKit.bat --run <operation-id>
+:command_dispatch
+set "HK_COMMAND=%~2"
+if not defined HK_COMMAND (
+    echo ERROR: Missing operation id.
+    exit /b 2
+)
+if /I "%HK_COMMAND%"=="core-full" goto dispatch_core_full
+if /I "%HK_COMMAND%"=="cleanup-temp" goto dispatch_cleanup_temp
+if /I "%HK_COMMAND%"=="power-high" goto dispatch_power_high
+if /I "%HK_COMMAND%"=="cleanup-background" goto dispatch_cleanup_background
+if /I "%HK_COMMAND%"=="ui-responsive" goto dispatch_ui_responsive
+if /I "%HK_COMMAND%"=="visual-performance" goto dispatch_visual_performance
+if /I "%HK_COMMAND%"=="startup-prune" goto dispatch_startup_prune
+if /I "%HK_COMMAND%"=="network-maintenance" goto dispatch_network_maintenance
+if /I "%HK_COMMAND%"=="services-cleanup" goto dispatch_services_cleanup
+if /I "%HK_COMMAND%"=="hibernation-disable" goto dispatch_hibernation_disable
+if /I "%HK_COMMAND%"=="gaming-fps" goto dispatch_gaming_fps
+if /I "%HK_COMMAND%"=="gaming-latency" goto dispatch_gaming_latency
+if /I "%HK_COMMAND%"=="gaming-full" goto dispatch_gaming_full
+if /I "%HK_COMMAND%"=="apply-all" goto dispatch_apply_all
+if /I "%HK_COMMAND%"=="restore-registry" goto dispatch_restore_registry
+if /I "%HK_COMMAND%"=="restore-power" goto dispatch_restore_power
+if /I "%HK_COMMAND%"=="restore-services" goto dispatch_restore_services
+if /I "%HK_COMMAND%"=="restore-hibernation" goto dispatch_restore_hibernation
+if /I "%HK_COMMAND%"=="restore-network" goto dispatch_restore_network
+if /I "%HK_COMMAND%"=="restart-explorer" goto dispatch_restart_explorer
+echo ERROR: Unknown operation id "%HK_COMMAND%".
+exit /b 2
+
+:dispatch_core_full
+call :run_full_core
+exit /b !errorlevel!
+:dispatch_cleanup_temp
+call :ensure_backup || exit /b !errorlevel!
+call :cleanup_temp
+exit /b !errorlevel!
+:dispatch_power_high
+call :ensure_backup || exit /b !errorlevel!
+call :apply_power_plan
+exit /b !errorlevel!
+:dispatch_cleanup_background
+call :ensure_backup || exit /b !errorlevel!
+call :cleanup_background
+exit /b !errorlevel!
+:dispatch_ui_responsive
+call :ensure_backup || exit /b !errorlevel!
+call :ui_responsiveness_tweaks
+exit /b !errorlevel!
+:dispatch_visual_performance
+call :ensure_backup || exit /b !errorlevel!
+call :visual_performance_mode
+exit /b !errorlevel!
+:dispatch_startup_prune
+call :ensure_backup || exit /b !errorlevel!
+call :startup_pruning
+exit /b !errorlevel!
+:dispatch_network_maintenance
+call :ensure_backup || exit /b !errorlevel!
+call :network_maintenance
+exit /b !errorlevel!
+:dispatch_services_cleanup
+call :ensure_backup || exit /b !errorlevel!
+call :services_cleanup
+exit /b !errorlevel!
+:dispatch_hibernation_disable
+call :ensure_backup || exit /b !errorlevel!
+call :disable_hibernation
+exit /b !errorlevel!
+:dispatch_gaming_fps
+call :ensure_backup || exit /b !errorlevel!
+call :gaming_fps_tweaks
+exit /b !errorlevel!
+:dispatch_gaming_latency
+call :ensure_backup || exit /b !errorlevel!
+call :gaming_latency_maintenance
+exit /b !errorlevel!
+:dispatch_gaming_full
+call :ensure_backup || exit /b !errorlevel!
+call :gaming_full_prep
+exit /b !errorlevel!
+:dispatch_apply_all
+call :run_apply_all
+exit /b !errorlevel!
+:dispatch_restore_registry
+call :restore_latest_registry
+exit /b !errorlevel!
+:dispatch_restore_power
+call :restore_power_defaults
+exit /b !errorlevel!
+:dispatch_restore_services
+call :restore_services
+exit /b !errorlevel!
+:dispatch_restore_hibernation
+call :enable_hibernation
+exit /b !errorlevel!
+:dispatch_restore_network
+call :restore_network_defaults
+exit /b !errorlevel!
+:dispatch_restart_explorer
+call :restart_explorer
+exit /b !errorlevel!
 
 :core_menu
 cls
@@ -283,12 +390,12 @@ powershell -NoProfile -Command ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
 set /p HK_RESTORE=  ^> 
-if "%HK_RESTORE%"=="1" call :restore_latest_registry & goto pause_return
-if "%HK_RESTORE%"=="2" call :restore_power_defaults & goto pause_return
-if "%HK_RESTORE%"=="3" call :restore_services & goto pause_return
-if "%HK_RESTORE%"=="4" call :enable_hibernation & goto pause_return
-if "%HK_RESTORE%"=="5" call :restore_network_defaults & goto pause_return
-if "%HK_RESTORE%"=="6" call :restart_explorer & goto pause_return
+if "%HK_RESTORE%"=="1" (call :restore_latest_registry & goto pause_return)
+if "%HK_RESTORE%"=="2" (call :restore_power_defaults & goto pause_return)
+if "%HK_RESTORE%"=="3" (call :restore_services & goto pause_return)
+if "%HK_RESTORE%"=="4" (call :enable_hibernation & goto pause_return)
+if "%HK_RESTORE%"=="5" (call :restore_network_defaults & goto pause_return)
+if "%HK_RESTORE%"=="6" (call :restart_explorer & goto pause_return)
 if "%HK_RESTORE%"=="7" goto main_menu
 goto restore_menu
 
@@ -348,6 +455,7 @@ echo.
 echo  HolmesKit requires Administrator privileges.
 echo  Right-click the script and choose "Run as administrator".
 echo.
+if defined HK_NONINTERACTIVE exit /b 1
 pause
 exit /b 1
 
@@ -403,6 +511,12 @@ exit /b 0
 if "%HK_BACKUP_READY%"=="1" exit /b 0
 if exist "%HK_LATEST%" rd /s /q "%HK_LATEST%" >nul 2>&1
 md "%HK_LATEST%" >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Could not create the backup directory.
+    call :log "Backup failed: could not create backup directory"
+    exit /b 1
+)
+set "HK_BACKUP_FAILED=0"
 call :log "Creating registry backups"
 call :export_key "HKCU\Control Panel\Desktop" "desktop.reg"
 call :export_key "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" "visualeffects.reg"
@@ -416,6 +530,11 @@ call :export_key "HKLM\Software\Policies\Microsoft\Windows\GameDVR" "gamedvr_pol
 call :export_key "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "mm_games.reg"
 call :export_key "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" "mm_profile.reg"
 call :export_key "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" "tcpip_params.reg"
+if "!HK_BACKUP_FAILED!"=="1" (
+    powershell -NoProfile -Command "Write-Host '  Registry backup failed. No changes were applied.' -ForegroundColor Red"
+    call :log "Registry backup failed"
+    exit /b 1
+)
 set "HK_BACKUP_READY=1"
 call :log "Registry backups complete"
 powershell -NoProfile -Command "Write-Host '  Registry backed up.' -ForegroundColor Green"
@@ -423,14 +542,20 @@ echo.
 exit /b 0
 
 :export_key
+reg query "%~1" >nul 2>&1
+if errorlevel 1 (
+    echo %~1^|%~2>>"%HK_LATEST%\absent_keys.txt"
+    exit /b 0
+)
 reg export "%~1" "%HK_LATEST%\%~2" /y >nul 2>&1
+if errorlevel 1 set "HK_BACKUP_FAILED=1"
 exit /b 0
 
 :: core: runs all four steps in sequence
 :run_full_core
-call :ensure_backup
-call :cleanup_temp
-call :apply_power_plan
+call :ensure_backup || exit /b !errorlevel!
+call :cleanup_temp || exit /b !errorlevel!
+call :apply_power_plan || exit /b !errorlevel!
 call :cleanup_background
 call :restart_explorer
 call :log "Full core optimization completed"
@@ -475,11 +600,18 @@ if %errorlevel%==0 (
     for /f "tokens=4 delims=: " %%G in ('powercfg /list ^| findstr /i "High performance"') do set "HK_POWER_GUID=%%G"
     if defined HK_POWER_GUID (
         powercfg /setactive !HK_POWER_GUID! >nul 2>&1
-        powershell -NoProfile -Command "Write-Host '  High Performance Plan Activated.' -ForegroundColor Green"
-        call :log "High Performance plan activated via GUID"
+        if errorlevel 1 (
+            powershell -NoProfile -Command "Write-Host '  Could Not Activate High Performance Plan.' -ForegroundColor Red"
+            call :log "Failed to activate High Performance plan via GUID"
+            exit /b 1
+        ) else (
+            powershell -NoProfile -Command "Write-Host '  High Performance Plan Activated.' -ForegroundColor Green"
+            call :log "High Performance plan activated via GUID"
+        )
     ) else (
         powershell -NoProfile -Command "Write-Host '  Could Not Activate High Performance Plan.' -ForegroundColor Red"
         call :log "Failed to activate High Performance plan"
+        exit /b 1
     )
 )
 echo.
@@ -506,15 +638,20 @@ exit /b 0
 call :log "Applying UI responsiveness tweaks"
 powershell -NoProfile -Command "Write-Host '  [*] Applying UI Responsiveness Tweaks...' -ForegroundColor Cyan"
 echo.
-reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "100" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d "4000" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d "5000" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v ForegroundLockTimeout /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d "1" /f >nul 2>&1
+set "HK_STEP_FAILED=0"
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "100" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d "4000" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d "5000" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Control Panel\Desktop" /v ForegroundLockTimeout /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d "1" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
 :: foreground apps get longer cpu slices
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "26" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "26" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
 :: skip writing last-access timestamps on file reads
-fsutil behavior set disablelastaccess 1 >nul 2>&1
+fsutil behavior set disablelastaccess 1 >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" (
+    call :log "UI responsiveness tweaks failed"
+    exit /b 1
+)
 call :restart_explorer
 call :log "UI responsiveness tweaks applied"
 powershell -NoProfile -Command "Write-Host '  UI Responsiveness Tweaks Applied.' -ForegroundColor Green"
@@ -526,11 +663,16 @@ exit /b 0
 call :log "Applying visual effects performance mode"
 powershell -NoProfile -Command "Write-Host '  [*] Applying Visual Effects Performance Mode...' -ForegroundColor Cyan"
 echo.
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d "2" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d "0" /f >nul 2>&1
+set "HK_STEP_FAILED=0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d "2" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" (
+    call :log "Visual effects performance mode failed"
+    exit /b 1
+)
 call :restart_explorer
 call :log "Visual effects performance mode applied"
 powershell -NoProfile -Command "Write-Host '  Visual Effects Performance Mode Applied.' -ForegroundColor Green"
@@ -565,11 +707,16 @@ exit /b 0
 call :log "Running network maintenance"
 powershell -NoProfile -Command "Write-Host '  [*] Running Network Maintenance...' -ForegroundColor Cyan"
 echo.
-ipconfig /flushdns >nul 2>&1
-ipconfig /release >nul 2>&1
-ipconfig /renew >nul 2>&1
-netsh winsock reset >nul 2>&1
-netsh int ip reset >nul 2>&1
+set "HK_STEP_FAILED=0"
+ipconfig /flushdns >nul 2>&1 || set "HK_STEP_FAILED=1"
+ipconfig /release >nul 2>&1 || set "HK_STEP_FAILED=1"
+ipconfig /renew >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh winsock reset >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int ip reset >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" (
+    call :log "Network maintenance failed"
+    exit /b 1
+)
 call :log "Network maintenance complete"
 powershell -NoProfile -Command "Write-Host '  Network Maintenance Completed. A Restart Is Recommended.' -ForegroundColor Green"
 echo.
@@ -580,6 +727,12 @@ exit /b 0
 call :log "Running background services cleanup"
 powershell -NoProfile -Command "Write-Host '  [*] Stopping And Disabling Background Services...' -ForegroundColor Cyan"
 echo.
+powershell -NoProfile -Command "$names=@('SysMain','WSearch','DiagTrack'); Get-CimInstance Win32_Service | Where-Object { $_.Name -in $names } | ForEach-Object { [pscustomobject]@{Name=$_.Name;StartMode=$_.StartMode;State=$_.State;DelayedAutoStart=[bool](Get-ItemPropertyValue -Path ('HKLM:\SYSTEM\CurrentControlSet\Services\'+$_.Name) -Name DelayedAutoStart -EA SilentlyContinue)} } | ConvertTo-Json | Set-Content -LiteralPath '%HK_LATEST%\service_states.json' -Encoding UTF8" >nul 2>&1
+if errorlevel 1 (
+    call :log "Could not back up service states"
+    exit /b 1
+)
+set "HK_STEP_FAILED=0"
 set "HK_SVC_FILE=%HK_LATEST%\service_states.txt"
 echo SysMain > "%HK_SVC_FILE%"
 sc qc SysMain 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
@@ -588,14 +741,18 @@ sc qc WSearch 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
 echo DiagTrack >> "%HK_SVC_FILE%"
 sc qc DiagTrack 2>nul | findstr "START_TYPE" >> "%HK_SVC_FILE%"
 sc stop SysMain >nul 2>&1
-sc config SysMain start= disabled >nul 2>&1
+sc config SysMain start= disabled >nul 2>&1 || set "HK_STEP_FAILED=1"
 powershell -NoProfile -Command "Write-Host '    [-] SysMain (Superfetch) stopped and disabled' -ForegroundColor DarkGray"
 sc stop WSearch >nul 2>&1
-sc config WSearch start= disabled >nul 2>&1
+sc config WSearch start= disabled >nul 2>&1 || set "HK_STEP_FAILED=1"
 powershell -NoProfile -Command "Write-Host '    [-] WSearch (Search Indexer) stopped and disabled' -ForegroundColor DarkGray"
 sc stop DiagTrack >nul 2>&1
-sc config DiagTrack start= disabled >nul 2>&1
+sc config DiagTrack start= disabled >nul 2>&1 || set "HK_STEP_FAILED=1"
 powershell -NoProfile -Command "Write-Host '    [-] DiagTrack (Telemetry) stopped and disabled' -ForegroundColor DarkGray"
+if "!HK_STEP_FAILED!"=="1" (
+    call :log "Background services cleanup failed"
+    exit /b 1
+)
 echo.
 call :log "Background services cleanup complete"
 powershell -NoProfile -Command "Write-Host '  Background Services Cleanup Completed.' -ForegroundColor Green"
@@ -609,7 +766,7 @@ exit /b 0
 call :log "Disabling hibernation"
 powershell -NoProfile -Command "Write-Host '  [*] Disabling Hibernation...' -ForegroundColor Cyan"
 echo.
-powercfg /h off >nul 2>&1
+powercfg /h off >nul 2>&1 || exit /b 1
 call :log "Hibernation disabled"
 powershell -NoProfile -Command "Write-Host '  Hibernation Disabled.' -ForegroundColor Green"
 echo.
@@ -620,16 +777,18 @@ exit /b 0
 call :log "Applying gaming FPS tweaks"
 powershell -NoProfile -Command "Write-Host '  [*] Applying FPS Tweaks...' -ForegroundColor Cyan"
 echo.
-call :apply_power_plan
-reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKLM\Software\Policies\Microsoft\Windows\GameDVR" /v AllowGameDVR /t REG_DWORD /d "0" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d "8" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d "6" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d "0" /f >nul 2>&1
-call :visual_performance_mode
+call :apply_power_plan || exit /b !errorlevel!
+set "HK_STEP_FAILED=0"
+reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\Software\Policies\Microsoft\Windows\GameDVR" /v AllowGameDVR /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d "8" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d "6" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" exit /b 1
+call :visual_performance_mode || exit /b !errorlevel!
 call :cleanup_background
 call :log "Gaming FPS tweaks applied"
 powershell -NoProfile -Command "Write-Host '  FPS Tweaks Applied.' -ForegroundColor Green"
@@ -641,12 +800,14 @@ exit /b 0
 call :log "Applying gaming latency maintenance"
 powershell -NoProfile -Command "Write-Host '  [*] Applying Latency Maintenance...' -ForegroundColor Cyan"
 echo.
-ipconfig /flushdns >nul 2>&1
-netsh winsock reset >nul 2>&1
-netsh int tcp set global fastopen=enabled >nul 2>&1
-netsh int tcp set global rss=enabled >nul 2>&1
-netsh int tcp set global autotuninglevel=disabled >nul 2>&1
-powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -Type DWord -Force -EA SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -Type DWord -Force -EA SilentlyContinue }" >nul 2>&1
+set "HK_STEP_FAILED=0"
+ipconfig /flushdns >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh winsock reset >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global fastopen=enabled >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global rss=enabled >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global autotuninglevel=disabled >nul 2>&1 || set "HK_STEP_FAILED=1"
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -Type DWord -Force -EA Stop; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -Type DWord -Force -EA Stop }" >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" exit /b 1
 for %%S in (DoSvc BITS) do net stop %%S >nul 2>&1
 call :cleanup_background
 call :log "Gaming latency maintenance applied"
@@ -656,8 +817,8 @@ exit /b 0
 
 :: gaming: fps + latency in one shot
 :gaming_full_prep
-call :gaming_fps_tweaks
-call :gaming_latency_maintenance
+call :gaming_fps_tweaks || exit /b !errorlevel!
+call :gaming_latency_maintenance || exit /b !errorlevel!
 call :log "Full gaming prep completed"
 powershell -NoProfile -Command "Write-Host '  Full Gaming Prep Completed.' -ForegroundColor Green"
 echo.
@@ -668,23 +829,34 @@ exit /b 0
 if not exist "%HK_LATEST%" (
     powershell -NoProfile -Command "Write-Host '  No Backup Found. Run An Optimization First.' -ForegroundColor Red"
     echo.
-    exit /b 0
+    exit /b 1
 )
 call :log "Restoring registry backups"
 powershell -NoProfile -Command "Write-Host '  [*] Restoring Registry Backups...' -ForegroundColor Cyan"
 echo.
+set "HK_STEP_FAILED=0"
 for %%F in (
     "desktop.reg" "visualeffects.reg" "explorer_advanced.reg"
     "windowmetrics.reg" "hkcu_run.reg" "hklm_run.reg"
     "gameconfigstore.reg" "gamedvr.reg" "gamedvr_policy.reg"
     "mm_games.reg" "mm_profile.reg" "tcpip_params.reg"
 ) do (
-    if exist "%HK_LATEST%\%%~F" reg import "%HK_LATEST%\%%~F" >nul 2>&1
+    if exist "%HK_LATEST%\%%~F" (
+        reg import "%HK_LATEST%\%%~F" >nul 2>&1
+        if errorlevel 1 set "HK_STEP_FAILED=1"
+    )
 )
-fsutil behavior set disablelastaccess 0 >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "2" /f >nul 2>&1
-netsh int tcp set global autotuninglevel=normal >nul 2>&1
-powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Force -EA SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Force -EA SilentlyContinue }" >nul 2>&1
+if exist "%HK_LATEST%\absent_keys.txt" (
+    for /f "usebackq tokens=1 delims=|" %%K in ("%HK_LATEST%\absent_keys.txt") do reg delete "%%K" /f >nul 2>&1
+)
+fsutil behavior set disablelastaccess 0 >nul 2>&1 || set "HK_STEP_FAILED=1"
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d "2" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global autotuninglevel=normal >nul 2>&1 || set "HK_STEP_FAILED=1"
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Force -EA SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Force -EA SilentlyContinue }" >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" (
+    call :log "Registry restoration failed"
+    exit /b 1
+)
 call :restart_explorer
 call :log "Registry restoration completed"
 powershell -NoProfile -Command "Write-Host '  Registry Restoration Completed.' -ForegroundColor Green"
@@ -696,15 +868,28 @@ exit /b 0
 call :log "Re-enabling background services"
 powershell -NoProfile -Command "Write-Host '  [*] Re-Enabling Background Services...' -ForegroundColor Cyan"
 echo.
-sc config SysMain start= auto >nul 2>&1
+if exist "%HK_LATEST%\service_states.json" (
+    powershell -NoProfile -Command "$states=@(Get-Content -Raw -LiteralPath '%HK_LATEST%\service_states.json' | ConvertFrom-Json); foreach($s in $states){$startup=switch($s.StartMode){'Auto'{'Automatic'}'Manual'{'Manual'}'Disabled'{'Disabled'}default{'Manual'}}; Set-Service -Name $s.Name -StartupType $startup -EA Stop; Set-ItemProperty -Path ('HKLM:\SYSTEM\CurrentControlSet\Services\'+$s.Name) -Name DelayedAutoStart -Value ([int][bool]$s.DelayedAutoStart) -Type DWord -Force -EA Stop; if($s.State -eq 'Running'){Start-Service -Name $s.Name -EA Stop}else{Stop-Service -Name $s.Name -Force -EA SilentlyContinue}}" >nul 2>&1
+    if errorlevel 1 (
+        call :log "Background service state restoration failed"
+        exit /b 1
+    )
+    call :log "Background service states restored from backup"
+    powershell -NoProfile -Command "Write-Host '  Background Service States Restored.' -ForegroundColor Green"
+    echo.
+    exit /b 0
+)
+set "HK_STEP_FAILED=0"
+sc config SysMain start= auto >nul 2>&1 || set "HK_STEP_FAILED=1"
 sc start SysMain >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [+] SysMain re-enabled' -ForegroundColor DarkGray"
-sc config WSearch start= delayed-auto >nul 2>&1
+sc config WSearch start= delayed-auto >nul 2>&1 || set "HK_STEP_FAILED=1"
 sc start WSearch >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [+] WSearch re-enabled' -ForegroundColor DarkGray"
-sc config DiagTrack start= auto >nul 2>&1
+sc config DiagTrack start= auto >nul 2>&1 || set "HK_STEP_FAILED=1"
 sc start DiagTrack >nul 2>&1
 powershell -NoProfile -Command "Write-Host '    [+] DiagTrack re-enabled' -ForegroundColor DarkGray"
+if "!HK_STEP_FAILED!"=="1" exit /b 1
 echo.
 call :log "Background services restored"
 powershell -NoProfile -Command "Write-Host '  Background Services Re-Enabled.' -ForegroundColor Green"
@@ -716,7 +901,7 @@ exit /b 0
 call :log "Restoring default power schemes"
 powershell -NoProfile -Command "Write-Host '  [*] Restoring Default Power Schemes...' -ForegroundColor Cyan"
 echo.
-powercfg /restoredefaultschemes >nul 2>&1
+powercfg /restoredefaultschemes >nul 2>&1 || exit /b 1
 call :log "Default power schemes restored"
 powershell -NoProfile -Command "Write-Host '  Default Power Schemes Restored.' -ForegroundColor Green"
 echo.
@@ -727,7 +912,7 @@ exit /b 0
 call :log "Re-enabling hibernation"
 powershell -NoProfile -Command "Write-Host '  [*] Re-Enabling Hibernation...' -ForegroundColor Cyan"
 echo.
-powercfg /h on >nul 2>&1
+powercfg /h on >nul 2>&1 || exit /b 1
 call :log "Hibernation enabled"
 powershell -NoProfile -Command "Write-Host '  Hibernation Enabled.' -ForegroundColor Green"
 echo.
@@ -738,12 +923,14 @@ exit /b 0
 call :log "Resetting network stack"
 powershell -NoProfile -Command "Write-Host '  [*] Resetting Network Stack...' -ForegroundColor Cyan"
 echo.
-netsh winsock reset >nul 2>&1
-netsh int ip reset >nul 2>&1
-netsh int tcp set global autotuninglevel=normal >nul 2>&1
-netsh int tcp set global fastopen=disabled >nul 2>&1
-ipconfig /flushdns >nul 2>&1
-powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Force -EA SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Force -EA SilentlyContinue }" >nul 2>&1
+set "HK_STEP_FAILED=0"
+netsh winsock reset >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int ip reset >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global autotuninglevel=normal >nul 2>&1 || set "HK_STEP_FAILED=1"
+netsh int tcp set global fastopen=disabled >nul 2>&1 || set "HK_STEP_FAILED=1"
+ipconfig /flushdns >nul 2>&1 || set "HK_STEP_FAILED=1"
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Force -EA SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Force -EA SilentlyContinue }" >nul 2>&1 || set "HK_STEP_FAILED=1"
+if "!HK_STEP_FAILED!"=="1" exit /b 1
 call :log "Network stack reset"
 powershell -NoProfile -Command "Write-Host '  Network Reset Complete. A Restart Is Recommended.' -ForegroundColor Green"
 echo.
@@ -754,6 +941,22 @@ exit /b 0
 call :log "Restarting Explorer"
 taskkill /f /im explorer.exe >nul 2>&1
 start "" explorer.exe
+exit /b 0
+
+:: shared non-interactive implementation of Apply All
+:run_apply_all
+call :ensure_backup || exit /b !errorlevel!
+call :cleanup_temp || exit /b !errorlevel!
+call :apply_power_plan || exit /b !errorlevel!
+call :cleanup_background || exit /b !errorlevel!
+call :ui_responsiveness_tweaks || exit /b !errorlevel!
+call :visual_performance_mode || exit /b !errorlevel!
+call :startup_pruning || exit /b !errorlevel!
+call :services_cleanup || exit /b !errorlevel!
+call :disable_hibernation || exit /b !errorlevel!
+call :gaming_fps_tweaks || exit /b !errorlevel!
+call :gaming_latency_maintenance || exit /b !errorlevel!
+call :log "Apply All completed"
 exit /b 0
 
 :: apply all: every meaningful tweak in one confirmed pass
@@ -815,22 +1018,15 @@ echo.
 set /p HK_APPLYALL=  Proceed? [Y/N]:  
 if /I "!HK_APPLYALL!" NEQ "Y" goto main_menu
 echo.
-call :ensure_backup
-call :cleanup_temp
-call :apply_power_plan
-call :cleanup_background
-call :ui_responsiveness_tweaks
-call :visual_performance_mode
-call :startup_pruning
-call :services_cleanup
-call :disable_hibernation
-call :gaming_fps_tweaks
-call :gaming_latency_maintenance
+call :run_apply_all
+if errorlevel 1 (
+    powershell -NoProfile -Command "Write-Host '  Apply All stopped because a step failed.' -ForegroundColor Red"
+    goto pause_return
+)
 echo.
 powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 powershell -NoProfile -Command "Write-Host '  All tweaks applied. Restart when ready.' -ForegroundColor Green"
 powershell -NoProfile -Command "Write-Host '  Log: HolmesKit_Backups\holmeskit.log' -ForegroundColor DarkGray"
-call :log "Apply All completed"
 goto pause_return
 
 :: system info: real-time dashboard, refreshes every 5s
