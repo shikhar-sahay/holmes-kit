@@ -1,388 +1,139 @@
 # HolmesKit
 
-> A Windows optimization toolkit focused on improving responsiveness by removing unnecessary background overhead - transparently, reversibly, and without black-box tweaks.
+HolmesKit is a transparent, confirmation-based Windows optimization toolkit with two interfaces:
 
-Most machines are not underpowered. They are simply spending too many resources on Windows itself. HolmesKit addresses that through targeted optimizations that are fully explained before anything changes.
+- **CLI:** `HolmesKit.bat`, the original standalone menu experience.
+- **Desktop:** `HolmesKit.exe`, a lightweight native Windows GUI built with C# and WPF.
 
----
+The desktop app is an additional frontend, not a replacement. System-changing GUI actions call the same Batch operations used by the CLI so the optimization logic does not drift into two implementations.
 
-# Table of Contents
+> HolmesKit changes Windows configuration. Save open work, review each confirmation, and keep a current backup. No performance outcome is guaranteed on every system.
 
-- [What It Does](#what-it-does)
-  - [Background Services](#background-services)
-  - [Windows Registry](#windows-registry)
-  - [Power Plan](#power-plan)
-  - [TCPIP Stack](#tcpip-stack)
-- [Key Features](#key-features)
-- [Menu Structure](#menu-structure)
-- [How to Use](#how-to-use)
-- [Recommended Usage](#recommended-usage)
-- [Things to Know](#things-to-know)
-- [Repository Structure](#repository-structure)
-- [License](#license)
+## Functionality
 
----
+| Area | CLI | Desktop | Restore path |
+|---|---:|---:|---:|
+| Core / Advanced / Gaming operations | Yes | Yes | Component restore options |
+| Apply All | Yes | Yes | Restore page |
+| System information | Yes | Yes | N/A |
+| Startup Manager | Yes | Yes | Toggle again |
+| Applications Manager | Yes | Yes | Application-specific |
+| Session/action logs | Yes | Yes | N/A |
 
-# What It Does
+The GUI shows scope, tradeoffs, and restart guidance before each optimization. Long-running commands run away from the UI thread, stream visible activity, support safe cancellation, and are judged by exit status rather than process launch alone.
 
-Windows ships with defaults tuned for broad compatibility, battery life, and general stability - not raw responsiveness. Over time, background services, startup tasks, telemetry, indexing, power throttling, and network buffering quietly accumulate overhead.
+## Requirements
 
-HolmesKit targets these areas directly while ensuring every change remains reversible.
+- Windows 10 or Windows 11, x64
+- Administrator access for system operations
+- Windows PowerShell 5.1
+- For source builds: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
----
+The published desktop app can be self-contained, so end users do not need to install .NET.
 
-## Background Services
+## Use the CLI
 
-HolmesKit stops and disables three constantly running background services:
+The CLI remains independent of the GUI:
 
-| Service | Purpose | Why Disable It |
-|---|---|---|
-| `SysMain` | Preloads applications into memory | Can cause sustained disk activity and unnecessary RAM usage |
-| `WSearch` | Indexes files for Windows Search | Constant indexing can heavily impact disk usage |
-| `DiagTrack` | Microsoft telemetry service | Provides no direct user-facing functionality |
+1. Clone or download the repository.
+2. Right-click `HolmesKit.bat` and select **Run as administrator**.
+3. Review the startup safety notice and every operation confirmation.
 
-Together, these services are responsible for a significant portion of idle CPU, RAM, and disk activity on many Windows systems.
+Nothing in the CLI requires `HolmesKit.exe` or the .NET SDK. The Batch file also has a validated non-interactive entry point used by the desktop app: `HolmesKit.bat --run core-full`. Normal CLI use retains all interactive menus.
 
----
+## Use the desktop app
 
-## Windows Registry
-
-HolmesKit applies targeted registry optimizations across several low-level Windows subsystems.
-
-### Desktop & UI Responsiveness
-
-Path:
-```reg
-HKCU\Control Panel\Desktop
-```
-
-Changes include:
-
-- Reduced menu animation delay
-- Longer CPU time slices for foreground applications via:
-  ```reg
-  Win32PrioritySeparation
-  ```
-
-### Explorer & Animations
-
-Path:
-```reg
-HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer
-```
-
-Changes include:
-
-- Disabling taskbar animations
-- Disabling window transition animations
-
-### Gaming & MMCSS Scheduling
-
-Path:
-```reg
-HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games
-```
-
-Changes include:
-
-- Increased GPU priority
-- MMCSS scheduling category set to `High`
-
-This prioritizes game-related threads more aggressively.
-
-### Xbox Game DVR
-
-Path:
-```reg
-HKCU\System\GameConfigStore
-```
-
-Changes include:
-
-- Disabling Xbox Game DVR background capture
-
-Even when inactive, Game DVR can still maintain overlay-related processes in the background.
-
-### Backup & Restore
-
-Before any registry modification:
-
-- Existing keys are exported automatically
-- All changes can be fully restored later
-
----
-
-## Power Plan
-
-Windows defaults to the **Balanced** power profile, which dynamically lowers CPU frequency during lighter workloads.
-
-HolmesKit switches the system to:
+Keep this distribution layout together:
 
 ```text
-High Performance (SCHEME_MIN)
-```
-
-If the alias fails to resolve, a GUID fallback is used automatically.
-
-### Result
-
-- Reduced CPU throttling
-- Faster frequency ramp-up
-- Improved responsiveness under load
-
----
-
-## TCP/IP Stack
-
-HolmesKit applies several low-latency networking optimizations using `netsh` and registry edits.
-
-### Enabled
-
-- TCP Fast Open
-- RSS (Receive Side Scaling)
-
-### Disabled / Adjusted
-
-- TCP autotuning
-- Nagle algorithm via:
-  ```reg
-  TcpAckFrequency=1
-  TCPNoDelay=1
-  ```
-
-### Why It Matters
-
-Nagle batching improves efficiency for bulk transfers but increases latency for real-time applications like gaming.
-
-These changes prioritize:
-
-- Faster packet dispatch
-- Lower latency
-- More consistent response times
-
-All networking changes are fully reversible through the Restore menu.
-
----
-
-# Key Features
-
-## Transparent by Design
-
-Every option includes:
-
-- A plain-English explanation
-- A breakdown of affected system components
-- Clear tradeoffs and side effects
-
-Nothing runs silently.
-
----
-
-## Confirmation-Based Execution
-
-No tweak runs automatically.
-
-Every action requires explicit confirmation before execution.
-
----
-
-## Full Restore System
-
-HolmesKit includes a complete rollback path:
-
-- Registry backups are restored automatically
-- Services are re-enabled with correct startup types
-- Power plans revert to defaults
-- Networking settings are restored
-
----
-
-## Real-Time System Info Dashboard
-
-A live dashboard displaying:
-
-- CPU usage
-- RAM usage
-- Disk usage per drive
-- Current power plan
-- Network activity
-- Top processes by CPU and RAM usage
-
-Refresh interval:
-```text
-Every 5 seconds
-```
-
----
-
-## Startup Manager
-
-HolmesKit scans:
-
-- Registry startup keys
-- Task Scheduler logon triggers
-
-Features include:
-
-- Unified startup list
-- Enable/disable toggles
-- `StartupApproved`-based management
-- Protected system entry detection
-
-No startup entries are deleted outright.
-
----
-
-## Apps Manager
-
-Displays installed applications from:
-
-- 64-bit registry hive
-- 32-bit registry hive
-- Per-user registry hive
-
-Includes:
-
-- Version information
-- Reported application size
-- MSI and non-MSI uninstall handling
-
----
-
-## Session Logging
-
-Every action is timestamped and logged to:
-
-```text
-HolmesKit_Backups\holmeskit.log
-```
-
-This provides a full audit trail across sessions.
-
----
-
-## Apply All Tweaks
-
-Runs the complete optimization sequence in one guided pass.
-
-Before execution:
-
-- Every step is explained
-- The entire configuration is backed up
-
----
-
-# Menu Structure
-
-```text
-[0] Apply All Tweaks
-[1] Core Optimization
-[2] Advanced Tweaks
-[3] Gaming Mode
-[4] Restore Defaults
-[5] System Info
-[6] Startup Manager
-[7] Apps Manager
-[8] Exit
-```
-
----
-
-# How to Use
-
-## 1. Download or Clone the Repository
-
-```bash
-git clone <repository-url>
-```
-
-Or download the ZIP directly from GitHub.
-
----
-
-## 2. Run HolmesKit as Administrator
-
-Right-click:
-
-```text
+HolmesKit.exe
 HolmesKit.bat
+modules/
+  gui_bridge.ps1
+  ...
 ```
 
-Then select:
+Launch `HolmesKit.exe`. Windows requests administrator approval at startup. If UAC is declined, Windows cancels startup without making changes.
+
+The app includes a compact Home summary; Core, Advanced, and Gaming pages; Apply All; protected-entry-aware Startup Manager; installed Applications Manager; on-demand System Information; prominent Restore actions; and live activity plus the shared log.
+
+## Build and test
+
+From PowerShell in the repository root:
+
+```powershell
+dotnet restore HolmesKit.slnx
+dotnet build HolmesKit.slnx -c Release
+dotnet test HolmesKit.slnx -c Release --no-build
+```
+
+## Publish a portable folder
+
+```powershell
+dotnet publish src\HolmesKit.Desktop\HolmesKit.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts\publish\win-x64
+```
+
+The app is emitted as one managed executable, while `HolmesKit.bat` and `modules/` remain adjacent engine files by design. Copy the entire publish folder, not only the executable.
+
+## Backup and restore
+
+Before optimization, HolmesKit creates its latest backup under `HolmesKit_Backups\latest`. Activity is appended to `HolmesKit_Backups\holmeskit.log`. This local machine state is excluded from Git.
+
+The Restore page exposes the same registry, power, service, hibernation, network, and Explorer actions as the CLI. Deleted temporary files are not recoverable, closed applications must be reopened, and third-party uninstall rollback belongs to that application's installer.
+
+## Safety notes
+
+- Temp cleanup skips in-use files, but deleted cache/temp content is not backed up.
+- Background cleanup force-closes the established app list; save work first.
+- High Performance mode increases energy use.
+- Disabling Windows Search stops live indexing.
+- Disabling hibernation can also affect Fast Startup.
+- Network operations can interrupt connectivity and may require a restart.
+- Startup Manager changes enabled state and never deletes entries.
+- Applications Manager launches the uninstaller registered with Windows.
+
+## Troubleshooting
+
+- **Missing script:** keep `HolmesKit.exe`, `HolmesKit.bat`, and `modules/` in the layout above.
+- **PowerShell missing:** restore Windows PowerShell 5.1. The GUI reports the launch failure.
+- **Access denied/UAC declined:** relaunch and approve the Windows prompt when ready.
+- **Operation failure:** inspect **Activity & Logs** and `HolmesKit_Backups\holmeskit.log`.
+- **Network issue:** use **Restore → Reset Network Defaults**, then restart Windows.
+- **Search unavailable:** use **Restore → Re-enable Background Services**.
+
+## Architecture
 
 ```text
-Run as Administrator
+                         HolmesKit operations
+                         HolmesKit.bat labels
+                                  |
+                 +----------------+----------------+
+                 |                                 |
+       interactive CLI menus             --run dispatcher
+          HolmesKit.bat                          |
+                                          async WPF service
+                                                 |
+                                           HolmesKit.exe
 ```
 
----
+`HolmesKitCommandService` is the GUI's single process boundary. It captures stdout, stderr, exit codes, progress lines, and cancellation. `gui_bridge.ps1` provides structured read/toggle/uninstall data for native tables while preserving the existing registry/task/uninstaller safety model.
 
-## 3. Create a Restore Point
+See [the feature-parity audit](docs/feature-parity.md) for the source-derived operation inventory.
 
-HolmesKit recommends creating a Windows restore point before applying changes.
-
----
-
-## 4. Choose an Option
-
-Select the desired optimization module from the main menu.
-
----
-
-# Recommended Usage
-
-| Option | Recommended Use |
-|---|---|
-| Core Optimization | General cleanup and responsiveness improvements |
-| Advanced Tweaks | Deeper low-level tuning |
-| Gaming Mode | Pre-gaming optimization pass |
-| Apply All Tweaks | Full optimization sequence |
-| Restore Defaults | Rollback and troubleshooting |
-
----
-
-# Things to Know
-
-- Disabling `WSearch` stops live indexing updates
-- File search results may become stale until restored
-- TCP optimizations may reduce bulk download throughput
-- Some network changes require a restart
-- Administrator privileges are required
-
----
-
-# Repository Structure
+## Repository structure
 
 ```text
-HolmesKit/
-│
-├── HolmesKit.bat
-├── README.md
-├── LICENSE
-├── .gitattributes
-├── .gitignore
-│
-├── modules/
-│   ├── logo.ps1
-│   ├── sysinfo.ps1
-│   ├── startup_mgr.ps1
-│   └── apps_mgr.ps1
-│
-└── HolmesKit_Backups/
+HolmesKit.bat                     CLI and shared optimization engine
+modules/                          CLI modules and GUI data bridge
+src/HolmesKit.Desktop/            WPF desktop application
+tests/HolmesKit.Desktop.Tests/    safe tests
+docs/                             audit and architecture notes
+HolmesKit_Backups/                generated local state (ignored)
 ```
 
----
+## Known limitations
 
-# License
-
-Recommended License:
-
-```text
-MIT License
-```
-
-Allows:
-
-- Open use
-- Modification
-- Redistribution
-- Attribution-based sharing
+- The desktop publish target is Windows x64.
+- Privileged integration behavior must be validated on a disposable Windows test machine; automated tests never alter registry, services, networking, power plans, or installed applications.
+- HolmesKit retains the original latest-backup model rather than backup history.
+- Windows editions and organization policies can reject individual service, TCP, power, or registry commands. Diagnostics remain visible and logged.
