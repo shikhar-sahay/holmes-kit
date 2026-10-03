@@ -11,6 +11,7 @@ public sealed class SystemSnapshot
     public double RamPercent { get; set; }
     public string Uptime { get; set; } = "Unknown";
     public string PowerPlan { get; set; } = "Unknown";
+    public string Network { get; set; } = "Unavailable";
     public int StartupCount { get; set; }
     public List<DiskSnapshot> Disks { get; set; } = [];
 }
@@ -38,6 +39,7 @@ public sealed class StartupEntry
 public sealed class InstalledApplication
 {
     public string Name { get; set; } = "";
+    public string Publisher { get; set; } = "";
     public string Version { get; set; } = "";
     public string Size { get; set; } = "";
     public string UninstallData { get; set; } = "";

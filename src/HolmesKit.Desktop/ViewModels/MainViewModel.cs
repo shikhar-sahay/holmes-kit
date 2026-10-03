@@ -21,7 +21,12 @@ public sealed class MainViewModel : ObservableObject
     private StartupEntry? selectedStartup;
     private InstalledApplication? selectedApplication;
     private string appFilter = "";
+    private string startupFilter = "";
     private string logText = "No log has been created yet.";
+    private string backupStatus = "Checking backup...";
+    private string backupTimestamp = "";
+    private bool hasBackup;
+    private int selectedPageIndex;
 
     public MainViewModel(IHolmesKitCommandService service, IHolmesKitPathResolver paths)
     {
@@ -35,9 +40,14 @@ public sealed class MainViewModel : ObservableObject
         UninstallCommand = new AsyncRelayCommand(UninstallAsync, p => p is InstalledApplication && !IsBusy);
         RefreshLogsCommand = new RelayCommand(_ => RefreshLogs());
         OpenLogFolderCommand = new RelayCommand(_ => OpenLogFolder());
+        CopyLogsCommand = new RelayCommand(_ => CopyLogs());
+        ClearActivityCommand = new RelayCommand(_ => Activity.Clear());
+        NavigateCommand = new RelayCommand(Navigate);
         CancelCommand = new RelayCommand(_ => operationCancellation?.Cancel(), _ => IsBusy);
+        StartupView = CollectionViewSource.GetDefaultView(StartupEntries);
+        StartupView.Filter = item => item is StartupEntry entry && (string.IsNullOrWhiteSpace(StartupFilter) || entry.Name.Contains(StartupFilter, StringComparison.CurrentCultureIgnoreCase) || entry.Command.Contains(StartupFilter, StringComparison.CurrentCultureIgnoreCase));
         ApplicationsView = CollectionViewSource.GetDefaultView(Applications);
-        ApplicationsView.Filter = item => item is InstalledApplication app && (string.IsNullOrWhiteSpace(AppFilter) || app.Name.Contains(AppFilter, StringComparison.CurrentCultureIgnoreCase));
+        ApplicationsView.Filter = item => item is InstalledApplication app && (string.IsNullOrWhiteSpace(AppFilter) || app.Name.Contains(AppFilter, StringComparison.CurrentCultureIgnoreCase) || app.Publisher.Contains(AppFilter, StringComparison.CurrentCultureIgnoreCase));
     }
 
     public IReadOnlyList<OperationDefinition> CoreOperations => OperationCatalog.All.Where(x => x.Category == "Core").ToList();
@@ -48,6 +58,8 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<string> Activity { get; } = [];
     public ObservableCollection<StartupEntry> StartupEntries { get; } = [];
     public ObservableCollection<InstalledApplication> Applications { get; } = [];
+    public ObservableCollection<string> RecentActivity { get; } = [];
+    public ICollectionView StartupView { get; }
     public ICollectionView ApplicationsView { get; }
 
     public AsyncRelayCommand RunOperationCommand { get; }
@@ -58,6 +70,9 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand UninstallCommand { get; }
     public RelayCommand RefreshLogsCommand { get; }
     public RelayCommand OpenLogFolderCommand { get; }
+    public RelayCommand CopyLogsCommand { get; }
+    public RelayCommand ClearActivityCommand { get; }
+    public RelayCommand NavigateCommand { get; }
     public RelayCommand CancelCommand { get; }
     public Func<string, string, bool>? Confirm { get; set; }
     public Action<string, string, MessageBoxImage>? Notify { get; set; }
@@ -77,12 +92,18 @@ public sealed class MainViewModel : ObservableObject
     public SystemSnapshot System { get => system; private set => Set(ref system, value); }
     public StartupEntry? SelectedStartup { get => selectedStartup; set => Set(ref selectedStartup, value); }
     public InstalledApplication? SelectedApplication { get => selectedApplication; set => Set(ref selectedApplication, value); }
+    public int SelectedPageIndex { get => selectedPageIndex; set => Set(ref selectedPageIndex, value); }
+    public string StartupFilter { get => startupFilter; set { if (Set(ref startupFilter, value)) StartupView.Refresh(); } }
     public string AppFilter { get => appFilter; set { if (Set(ref appFilter, value)) ApplicationsView.Refresh(); } }
     public string LogText { get => logText; private set => Set(ref logText, value); }
+    public string BackupStatus { get => backupStatus; private set => Set(ref backupStatus, value); }
+    public string BackupTimestamp { get => backupTimestamp; private set => Set(ref backupTimestamp, value); }
+    public bool HasBackup { get => hasBackup; private set => Set(ref hasBackup, value); }
 
     public async Task InitializeAsync()
     {
         RefreshLogs();
+        UpdateBackupSummary();
         await RefreshSystemAsync();
     }
 
@@ -107,6 +128,7 @@ public sealed class MainViewModel : ObservableObject
             Activity.Add("Completed successfully.");
             Status = "Completed";
             RefreshLogs();
+            UpdateBackupSummary();
         });
     }
 
@@ -183,9 +205,12 @@ public sealed class MainViewModel : ObservableObject
     {
         try
         {
-            if (!File.Exists(paths.LogFile)) { LogText = "No HolmesKit log has been created yet."; return; }
+            if (!File.Exists(paths.LogFile)) { LogText = "No HolmesKit log has been created yet."; RecentActivity.Clear(); return; }
             var lines = File.ReadLines(paths.LogFile).TakeLast(500);
-            LogText = string.Join(Environment.NewLine, lines);
+            var materialized = lines.ToList();
+            LogText = string.Join(Environment.NewLine, materialized);
+            RecentActivity.Clear();
+            foreach (var line in materialized.TakeLast(4).Reverse()) RecentActivity.Add(line);
         }
         catch (Exception ex) { LogText = $"Unable to read the log: {ex.Message}"; }
     }
@@ -195,6 +220,47 @@ public sealed class MainViewModel : ObservableObject
         var folder = Path.GetDirectoryName(paths.LogFile)!;
         Directory.CreateDirectory(folder);
         Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
+    }
+
+    private void CopyLogs()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(LogText))
+            {
+                Clipboard.SetText(LogText);
+                Status = "Log copied to clipboard";
+            }
+        }
+        catch (Exception ex)
+        {
+            Status = "Copy failed";
+            Notify?.Invoke("Unable to copy the log", ex.Message, MessageBoxImage.Error);
+        }
+    }
+
+    private void Navigate(object? parameter)
+    {
+        if (parameter is int index) SelectedPageIndex = index;
+        else if (int.TryParse(parameter?.ToString(), out var parsed)) SelectedPageIndex = parsed;
+    }
+
+    private void UpdateBackupSummary()
+    {
+        var backup = Path.Combine(paths.RootDirectory, "HolmesKit_Backups", "latest");
+        try
+        {
+            var exists = Directory.Exists(backup) && Directory.EnumerateFiles(backup).Any();
+            HasBackup = exists;
+            BackupStatus = exists ? "Backup available" : "No backup detected";
+            BackupTimestamp = exists ? $"Updated {Directory.GetLastWriteTime(backup):MMM d, yyyy · h:mm tt}" : "Created automatically before optimization";
+        }
+        catch
+        {
+            HasBackup = false;
+            BackupStatus = "Backup status unavailable";
+            BackupTimestamp = "Check HolmesKit_Backups manually";
+        }
     }
 
     private void AppendGuiLog(string message)

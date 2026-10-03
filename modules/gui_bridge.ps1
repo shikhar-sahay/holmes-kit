@@ -105,6 +105,11 @@ try {
             $ramUsed = [Math]::Round($ramTotal - ($os.FreePhysicalMemory / 1MB), 1)
             $power = 'Unknown'
             try { $line = powercfg /getactivescheme 2>$null; if ($line -match '\((.+)\)') { $power = $Matches[1].Trim() } } catch { }
+            $network = 'Unavailable'
+            try {
+                $activeAdapters = @(Get-NetAdapter -ErrorAction Stop | Where-Object Status -eq 'Up' | Select-Object -ExpandProperty Name)
+                if ($activeAdapters.Count -gt 0) { $network = $activeAdapters -join ', ' }
+            } catch { }
             $disks = foreach ($drive in Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue) {
                 if ($null -ne $drive.Used -and ($drive.Used + $drive.Free) -gt 0) {
                     $total = $drive.Used + $drive.Free
@@ -115,7 +120,7 @@ try {
             $snapshot = [pscustomobject]@{
                 ComputerName=$env:COMPUTERNAME; Windows=$os.Caption; Cpu=($cpu.Name -replace '\s+',' ').Trim(); CpuPercent=$cpuPercent
                 RamUsedGb=$ramUsed; RamTotalGb=$ramTotal; RamPercent=if ($ramTotal) { [Math]::Round($ramUsed/$ramTotal*100) } else { 0 }
-                Uptime="$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"; PowerPlan=$power
+                Uptime="$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"; PowerPlan=$power; Network=$network
                 StartupCount=@(Get-RegistryStartups).Count; Disks=@($disks)
             }
             ConvertTo-Json -InputObject $snapshot -Compress -Depth 5
@@ -153,7 +158,7 @@ try {
             $result = $apps | Sort-Object DisplayName | Group-Object DisplayName | ForEach-Object {
                 $app = $_.Group[0]
                 [pscustomobject]@{
-                    Name=[string]$app.DisplayName; Version=[string]$app.DisplayVersion
+                    Name=[string]$app.DisplayName; Publisher=[string]$app.Publisher; Version=[string]$app.DisplayVersion
                     Size=if ($app.EstimatedSize) { "$([Math]::Round($app.EstimatedSize/1024,1)) MB" } else { '' }
                     UninstallData=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$app.UninstallString))
                 }
