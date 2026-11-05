@@ -54,7 +54,7 @@ Existing Task 01 consent/backup tests, lifecycle/conflict/locking tests and WPF 
 
 ## 8. Hosted CI
 
-Task 03 hosted verification is checked after the documentation milestone is pushed. Final run URL/conclusion is added to this report in the final evidence commit. Historical Task 02 success is not substituted for Task 03 CI.
+Task 03 [Windows verification run 42093231679](https://github.com/shikhar-sahay/holmes-kit/actions/runs/42093231679) completed **successfully** on `fb486106c0ce05d8c3d8aa586686f0e419af1681`. Hosted restore, Release build and safe tests all passed. The job log confirms zero warnings/errors and **302 passed, zero failed/skipped**, in a 20-second suite. This verifies Task 03 code independently of local results and includes the WPF construction test; no exclusions or further timeout changes were made. A subsequent report/checklist-only commit records these results without changing executable code.
 
 The candidate workflow was inspected: it builds, runs safe tests and uploads an unsigned artifact without creating a Release/tag. It was **NOT EXECUTED**: available connector tools expose workflow reads/reruns but no dispatch operation, and GitHub CLI is unavailable. No credential extraction or unapproved release workaround was attempted. A repository operator can invoke the existing manual workflow and verify its artifact using the documented tool.
 
@@ -66,7 +66,7 @@ The expanded procedure covers Win11, appropriately serviced Win10, locale/policy
 
 ## 10. Portable candidate verification
 
-Local unsigned candidate: `artifacts/packages/HolmesKit-0.3.0-rc.2-win-x64.zip`. The publisher/verifier completed successfully: **18 payload entries, 17 internal checksums**, archive SHA-256 sidecar verified. Required EXE, Batch and all PowerShell runtime modules are present; documentation/version are included; backups, recovery journals, logs, PDBs and user state are excluded by policy/tests. The adjacent engine layout matches executable-directory path resolution.
+Local unsigned candidate: `artifacts/packages/HolmesKit-0.3.0-rc.2-win-x64.zip`. The publisher/verifier completed successfully: **18 payload entries, 17 internal checksums**, archive SHA-256 sidecar verified. SHA-256: `8B1F7C6E78A1CA5BB6BEB2768D9A5C5F68CBD503D4082E2B997149161B3AC086`. Required EXE, Batch and all PowerShell runtime modules are present; documentation/version are included; backups, recovery journals, logs, PDBs and user state are excluded by policy/tests. Embedded Batch/module hashes also match final source. The adjacent engine layout matches executable-directory path resolution. Documentation inside the candidate is the pre-CI evidence snapshot; final hosted results are recorded here rather than rebuilding unchanged executable code.
 
 The verification tool does not execute the candidate or authenticate/sign it. Native packaged startup/operation testing is still a VM task. Packaging is repeatable by process, not guaranteed bit-for-bit across SDK/archive timestamps. No public Release, tag, download site or release asset was created or overwritten.
 
@@ -82,7 +82,7 @@ No licence file exists. The handbook explains that public source alone does not 
 |---|---|---|---|
 | Release build | PASS | Local zero-warning/error build | Retain exact commit evidence |
 | Safe tests | PASS | 302/302, no skips | Keep isolation; do not infer native behavior |
-| Hosted Task 03 CI | NOT EXECUTED at report draft | Await push/run verification | Add final run URL/conclusion |
+| Hosted Task 03 CI | PASS | Run 42093231679, commit fb48610; build and 302 tests passed | Preserve run evidence; not native VM proof |
 | Candidate contents/checksums | PASS | Local rc.2, 18 files / 17 hashes plus archive hash | Verify downloaded hosted artifact separately |
 | Hosted packaging | NOT EXECUTED | No dispatch tool/CLI available | Operator dispatch and artifact review |
 | Native Win10/11 apply/recover | NOT EXECUTED | No authorized disposable VM | Execute checkpoint/reversion matrix |
@@ -110,11 +110,12 @@ Native recovery and compatibility remain unproven. External processes may race r
 
 - `2eb02b0cd6d5b450845c51c4eae78f7b89a5b65d` — `fix: validate recovery data types and compare states structurally`.
 - `e3ebab2c4569fd9bb3dd14a3f3a5ff7e3971aa33` — `feat: add safe validation evidence and candidate verification` (also accessibility/log bounds and final conversion cases).
-- Documentation/release evidence commits are identified by `git log --oneline -- HOLMESKIT_TASK_03_REPORT.md`; their hashes/push status are included in delivery. A report cannot embed its own final commit hash without circularity.
+- `fb486106c0ce05d8c3d8aa586686f0e419af1681` — `docs: document validation process and MVP release gates`; hosted CI passed on this complete implementation/documentation tree.
+- The final report/checklist-only commit is identified by `git log --oneline -- HOLMESKIT_TASK_03_REPORT.md`; its hash/push status is included in delivery. A report cannot embed its own final commit hash without circularity.
 
 ## 16. Push and final state
 
-Only verified changes are pushed directly to `origin/master` after remote comparison. Final local/remote HEAD is checked in delivery. The sole intended remaining untracked file is the preserved `HOLMESKIT_AUDIT_SUMMARY.md`. No generated package, evidence fixture, journal, log, machine identifier or secret is staged. No branch/PR, force push, history rewrite or public release is performed.
+The three implementation/documentation commits were pushed successfully directly to `origin/master` after remote comparison; hosted CI passed on their final tree. The final report/checklist-only update is also pushed and local/remote HEAD is checked in delivery. The sole remaining untracked file is the preserved `HOLMESKIT_AUDIT_SUMMARY.md`. No generated package, evidence fixture, journal, log, machine identifier or secret is staged. No branch/PR, force push, history rewrite or public release was performed.
 
 ## 17. Recommended next task
 
