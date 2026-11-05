@@ -22,6 +22,13 @@ public class RecoveryPolicyTests
     [InlineData("binary")]
     [InlineData("multistring")]
     [InlineData("operation-scope")]
+    [InlineData("property-order")]
+    [InlineData("null-dword")]
+    [InlineData("fractional-qword")]
+    [InlineData("null-binary")]
+    [InlineData("bad-multistring")]
+    [InlineData("empty-binary")]
+    [InlineData("changed-type")]
     public async Task RecoveryPolicy_IsolatedFromNativeWindows(string scenario)
     {
         var root = new HolmesKitPathResolver(AppContext.BaseDirectory).RootDirectory;
@@ -42,6 +49,13 @@ public class RecoveryPolicyTests
                 $j=New-HolmesJournal $scope 'machine-fixture' 'user-fixture'
                 Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture'
                 switch($env:HK_TEST_CASE){
+                  'property-order' { $a=[pscustomobject]@{Exists=$true;Kind='DWord';Data=7}; $b=[pscustomobject]@{Data=7;Kind='DWord';Exists=$true}; Check (Test-HolmesEqual $a $b) 'Property order caused false conflict' }
+                  'null-dword' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='DWord';Data=$null}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
+                  'fractional-qword' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='QWord';Data=1.5}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
+                  'null-binary' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='Binary';Data=$null}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
+                  'bad-multistring' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='MultiString';Data=@('text',7)}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
+                  'empty-binary' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='Binary';Data=@()}; Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' }
+                  'changed-type' { $j.Entries[0].After=[pscustomobject]@{Exists=$true;Kind='DWord';Data=26}; $script:state=[pscustomobject]@{Exists=$true;Kind='String';Data='26'}; $result=@(Restore-HolmesJournal $j $scope 'Registry'); Check ($script:writes -eq 0 -and $result[-1] -eq 1) 'External type change overwritten' }
                   'operation-scope' { $items=@([pscustomobject]@{Id='Service|SysMain'},[pscustomobject]@{Id='Service|BITS'},[pscustomobject]@{Id='Registry|HKCU\Control Panel\Desktop|MenuShowDelay'},[pscustomobject]@{Id='Registry|HKCU\Control Panel\Desktop\WindowMetrics|MinAnimate'}); $selected=@(Get-HolmesOperationScope $items 'services-cleanup'); Check ($selected.Count -eq 1 -and $selected[0].Id -eq 'Service|SysMain') 'Service scope drift'; $selected=@(Get-HolmesOperationScope $items 'ui-responsive'); Check ($selected.Count -eq 1 -and $selected[0].Id.EndsWith('MenuShowDelay')) 'UI scope drift' }
                   'binary' { $value=Convert-HolmesRegistryData ([pscustomobject]@{Kind='Binary';Data=@(0,255)}); Check ($value -is [byte[]] -and $value[1] -eq 255) 'Binary data lost its CLR type' }
                   'multistring' { $value=Convert-HolmesRegistryData ([pscustomobject]@{Kind='MultiString';Data=@('one','two')}); Check ($value -is [string[]] -and $value.Count -eq 2) 'Multi-string lost its CLR type' }

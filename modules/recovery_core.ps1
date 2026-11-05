@@ -110,7 +110,20 @@ function Write-HolmesState($Item, $State) {
     }
 }
 
-function Test-HolmesEqual($A,$B) { return (ConvertTo-Json -InputObject $A -Compress -Depth 12) -ceq (ConvertTo-Json -InputObject $B -Compress -Depth 12) }
+function ConvertTo-HolmesCanonical($Value) {
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) { return $Value }
+    if ($Value -is [System.Collections.IEnumerable] -and $Value -isnot [System.Collections.IDictionary]) {
+        return ,@($Value | ForEach-Object { ConvertTo-HolmesCanonical $_ })
+    }
+    $result=[ordered]@{}
+    $names=if($Value -is [System.Collections.IDictionary]){@($Value.Keys)}else{@($Value.PSObject.Properties.Name)}
+    foreach($name in ($names | Sort-Object)) { $result[$name]=ConvertTo-HolmesCanonical $Value.$name }
+    return [pscustomobject]$result
+}
+
+function Test-HolmesEqual($A,$B) {
+    return (ConvertTo-Json -InputObject (ConvertTo-HolmesCanonical $A) -Compress -Depth 12) -ceq (ConvertTo-Json -InputObject (ConvertTo-HolmesCanonical $B) -Compress -Depth 12)
+}
 
 function Assert-HolmesJournal($Journal,$Scope,[string]$Machine,[string]$User) {
     if ($Journal.Version -ne 1 -or $Journal.Machine -ne $Machine -or $Journal.User -ne $User) { throw 'Recovery journal version or machine/user identity mismatch.' }
@@ -131,10 +144,10 @@ function Assert-HolmesJournal($Journal,$Scope,[string]$Machine,[string]$User) {
                     if ($state.Exists -and $state.Kind -eq 'None') { throw 'Missing registry type.' }
                     if ($state.Exists) {
                         switch ($state.Kind) {
-                            'DWord' { $null=[int]$state.Data }
-                            'QWord' { $null=[long]$state.Data }
-                            'Binary' { $null=[byte[]]$state.Data }
-                            'MultiString' { if ($state.Data -is [string] -or $null -eq $state.Data) { throw 'Invalid multi-string data.' } }
+                            'DWord' { if ($state.Data -isnot [int] -and $state.Data -isnot [long]) { throw 'Invalid DWORD data.' }; $null=[int]$state.Data }
+                            'QWord' { if ($state.Data -isnot [int] -and $state.Data -isnot [long]) { throw 'Invalid QWORD data.' }; $null=[long]$state.Data }
+                            'Binary' { if ($null -eq $state.Data -or $state.Data -is [string] -or $state.Data -isnot [System.Collections.IEnumerable]) { throw 'Invalid binary data.' }; foreach($b in $state.Data){if(($b -isnot [byte] -and $b -isnot [int] -and $b -isnot [long]) -or $b -lt 0 -or $b -gt 255){throw 'Invalid binary byte.'}} }
+                            'MultiString' { if ($state.Data -is [string] -or $null -eq $state.Data -or $state.Data -isnot [System.Collections.IEnumerable]) { throw 'Invalid multi-string data.' }; foreach($s in $state.Data){if($s -isnot [string]){throw 'Invalid multi-string element.'}} }
                             default { if ($state.Data -isnot [string]) { throw 'Invalid registry string data.' } }
                         }
                     }
