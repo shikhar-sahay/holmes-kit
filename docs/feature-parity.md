@@ -40,3 +40,5 @@ This inventory comes from `HolmesKit.bat` and every script under `modules/`, not
 Tests deliberately avoid privileged mutations. They cover the catalog, command construction, process output/exit capture, path discovery, and validation.
 
 Task 02 adds pure recovery-policy fixtures and actual-orchestrator lifecycle tests with all native adapters replaced. The retained baseline is shared by CLI and desktop, serialized with an exclusive file lock and atomically published with corruption checks. This is not a full-system backup. Interrupted journals, identity/scope changes and corruption fail closed for manual review. Native apply/recover behavior still requires the disposable-VM matrix in `WINDOWS_VM_VERIFICATION.md`.
+
+Task 03 tightens numeric/binary/multi-string validation and compares state independently of JSON property ordering while preserving array order and value type differences. Conversion, conflict, package-verification and read-only evidence fixtures do not establish native adapter correctness. See [the handbook](HANDBOOK.md) and [release gates](RELEASE_READINESS.md) for current limitations.

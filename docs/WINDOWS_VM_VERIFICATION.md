@@ -2,6 +2,26 @@
 
 Never perform native optimization/recovery integration tests on the development workstation. Ordinary tests use temporary files, command stubs and mocked native adapters.
 
+## Execution authorization and evidence
+
+No suitable VM has been explicitly authorized in the Task 03 workspace. Native scenarios are **NOT EXECUTED**. A virtualization indicator is not permission. An operator must separately confirm the VM is disposable, a usable checkpoint exists, modifications are authorized, and reversion is possible. Do not run native tests on the development workstation.
+
+On the authorized VM, capture read-only evidence before, after and after reversion, using a fresh output filename each time:
+
+```powershell
+./tools/Collect-ValidationEvidence.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.3.0-rc.1-win-x64.zip -EnvironmentLabel Win11-en-admin -CheckpointId checkpoint-name -Phase Before -OutputPath ./artifacts/before-private.json -IncludeManagedState
+```
+
+The collector never applies changes and leaves every scenario NOT EXECUTED. It records OS/PowerShell/runtime, source commit, candidate SHA-256, checkpoint label and optional managed state. Operator authorization, actual outcomes and successful reversion must be recorded separately. Managed state can contain sensitive paths/commands: never commit or upload raw evidence. It refuses to overwrite an existing file.
+
+For each scenario, record: environment/build/locale/account, starting checkpoint, commit/version/hash, operation, expected result, actual result, PASS/FAIL/BLOCKED/NOT EXECUTED, diagnostic reference and reversion result. Use separate fresh checkpoints for interruption, access-denied, malformed journal and network reset tests; do not corrupt the only recovery evidence.
+
+## Required environment matrix
+
+Use current Windows 11 and an appropriately supported Windows 10 environment (document its servicing arrangement), non-English locale, policy restrictions, standard/admin accounts and alternate-administrator elevation. Test no native scenario unless that specific environment is authorized. No matrix row is considered passed merely because another row or Windows Server CI passed.
+
+## Scenarios
+
 Before a public release, use disposable Windows 10/11 x64 VMs with checkpoints, including a non-English installation and a policy-restricted configuration. Record exact OS build, PowerShell version, candidate version/hash, test outcome and unresolved failures. CI compilation alone is not Windows compatibility verification.
 
 1. Checkpoint the VM. Install the unsigned candidate in an ordinary extracted folder. Keep the entire EXE/Batch/modules distribution. Do not use a protected installation directory for the MVP.
