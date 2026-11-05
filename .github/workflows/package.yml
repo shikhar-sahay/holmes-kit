@@ -1,0 +1,34 @@
+name: Prepare unsigned portable candidate
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Candidate version (for example 0.2.0-rc.1)
+        required: true
+        default: '0.2.0-rc.1'
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build HolmesKit.slnx -c Release
+      - run: dotnet test HolmesKit.slnx -c Release --no-build
+      - name: Package candidate
+        shell: pwsh
+        env:
+          CANDIDATE_VERSION: ${{ inputs.version }}
+        run: ./tools/Publish-Portable.ps1 -Version $env:CANDIDATE_VERSION
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-portable-candidate
+          path: |
+            artifacts/packages/*.zip
+            artifacts/packages/*.sha256
+          if-no-files-found: error
+      # Deliberately no GitHub Release publication: VM validation and licensing remain gates.

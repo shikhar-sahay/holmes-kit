@@ -43,11 +43,11 @@ Nothing in the CLI requires `HolmesKit.exe` or the .NET SDK. The Batch file also
 
 Independently selected changes, including restore actions, startup toggles and launching uninstallers, require a fresh `Y` confirmation (`y` is accepted). Declined, blank, invalid or unavailable input does not authorize a change. The desktop supplies its own confirmation; the `--run` dispatcher is an automation boundary for an already-authorized caller and never prompts for console input.
 
-Where the existing operation requires a registry backup, backup failure stops that operation before its modifying steps. Apply All uses one confirmation and stops on a checked prerequisite or step failure. Earlier successful steps may remain applied; HolmesKit does not automatically roll them back. Cleanup may report partial failure when files are in use or inaccessible.
+Engine operations validate a retained recovery journal before modifying steps. Backup or validation failure stops execution. Apply All uses one confirmation and stops on a checked prerequisite or step failure. Earlier successful steps may remain applied; HolmesKit does not automatically roll them back. Cleanup may report partial failure when files are in use or inaccessible.
 
 ## Desktop application
 
-The desktop application is a lightweight C#/WPF frontend for Windows 10 and Windows 11. It starts with administrator privileges because optimization and restore operations modify protected system configuration. Read-only data is collected in the background so the interface remains responsive.
+The desktop application is a lightweight C#/WPF frontend targeting Windows 10 and Windows 11. It starts with administrator privileges because optimization and restore operations modify protected system configuration. Read-only data is collected in the background. Cancel is disabled and closing is blocked while modifications run; read-only queries remain cancellable. A forced process termination or power loss can still interrupt changes.
 
 The interface includes:
 
@@ -94,7 +94,7 @@ Run the isolated Task 01 safety regressions with:
 dotnet test HolmesKit.slnx -c Release --filter "FullyQualifiedName~CliSafetyTests|FullyQualifiedName~GuiAuthorizationTests|FullyQualifiedName~ManagementConfirmationTests|FullyQualifiedName~RealDesktopBatchBoundary"
 ```
 
-These tests execute real CMD control flow with all Windows-changing subroutines replaced by inert markers, exercise backup orchestration in temporary directories with export stubs, and test management approval fragments and the desktop process boundary with controlled fixtures. They do not run the real optimization or restore engine. Existing optional visual tests can query system data; do not enable `HOLMESKIT_VISUAL_REVIEW_DIR` for the normal safety run.
+These tests execute real CMD control flow with all Windows-changing subroutines replaced by inert markers and test management approval fragments and the desktop process boundary with controlled fixtures. The full suite also exercises the recovery journal and lifecycle in temporary directories with native adapters replaced by inert state fixtures. It does not run the real optimization or restore engine. Existing optional visual tests can query system data; do not enable `HOLMESKIT_VISUAL_REVIEW_DIR` for the normal safety run.
 
 Run the source-built application with:
 
@@ -108,15 +108,25 @@ dotnet run --project src\HolmesKit.Desktop\HolmesKit.Desktop.csproj -c Release
 dotnet publish src\HolmesKit.Desktop\HolmesKit.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts\publish\win-x64
 ```
 
+Prepare an unsigned portable validation candidate with the complete engine and checksums:
+
+```powershell
+./tools/Publish-Portable.ps1 -Version 0.2.0-rc.1
+```
+
+The Windows CI workflow builds and runs safe tests. A separate manually triggered workflow prepares a downloadable Actions artifact, **not a public release**. Both workflows are prepared in source; their hosted execution must be checked after pushing. Public release/signing and a project website remain gated on [disposable-VM verification](docs/WINDOWS_VM_VERIFICATION.md) and a project licensing decision. No installer or automatic updater is included. These builds are unsigned.
+
 The app is emitted as one managed executable, while `HolmesKit.bat` and `modules/` remain adjacent engine files by design. Copy the entire publish folder, not only the executable.
 
 ## Backup and restore
 
-Before optimization, HolmesKit creates its latest backup under `HolmesKit_Backups\latest`. The desktop application verifies that every expected registry key has either a valid export or an explicit absent-key record before it enables registry restoration. An unrelated or partial file is not shown as a valid backup. Activity is appended to `HolmesKit_Backups\holmeskit.log`; all local machine state is excluded from Git.
+The first engine operation captures `HolmesKit_Backups\recovery\baseline.json`. Its baseline ID, creation time and original values persist across repeated operations, restarts and both interfaces. Same-volume staging/atomic publication preserves the prior envelope before replacement; `baseline.previous.json` retains the previous journal version. A file lock serializes engine operations. Incomplete staging files are not selected for recovery. Legacy files under `HolmesKit_Backups\latest` are preserved unchanged and require manual review; automatic broad registry import/deletion is disabled.
 
-The Restore page exposes the same registry, power, service, hibernation, network, and Explorer actions as the CLI. Deleted temporary files are not recoverable, closed applications must be reopened, and third-party uninstall rollback belongs to that application's installer.
+Managed recovery validates format, checksum, machine/user identity and an explicit current scope before mutation. Only captured registry values are restored, including their prior absence and types; unrelated keys/values are never deleted. Service startup/running states and the previous active power GUID are captured. Restore skips values that no longer match the recorded HolmesKit state and reports partial outcomes. The original power plan must still exist. Changed adapter scope, corruption, identity mismatch or an interrupted `Running` journal blocks automatic execution for manual review. Checksums detect accidental corruption, not malicious tampering by someone who can rewrite the journal and checksum. Do not share or manually edit recovery files.
 
-The latest backup is replaced by a later Batch session (including a later desktop operation); it is not a permanent original-state baseline. Registry imports merge saved values and cannot fully remove newly added values. Power recovery recreates default schemes and can remove custom plans; network/hibernation recovery also applies defaults rather than an exact prior snapshot. Task 01 repairs authorization and prerequisite gates, not these restoration limitations. A registry backup cannot recover deleted files or unsaved work from force-closed applications.
+Recovery is deliberately limited: network resets, TCP global defaults, NTFS last-access behavior and hibernation are not exact-state rollback. Deleted files, uninstalled applications and unsaved work cannot be recovered. Application rollback belongs to its installer. No baseline rotation/migration UI or interrupted-operation reconciliation is provided yet; preserve the journal and request review instead of deleting it to bypass a safety block. Activity is appended to `HolmesKit_Backups\holmeskit.log` without external telemetry.
+
+Extract the portable app into an ordinary folder, keep all engine files together, and retain the existing folder and recovery data during upgrades. Protected-directory installation is not supported by this MVP. Removing the extracted program does not undo Windows changes; save recovery data separately before deleting program files.
 
 ## Safety notes
 
@@ -175,7 +185,8 @@ HolmesKit_Backups/                generated local state (ignored)
 
 - The desktop publish target is Windows x64.
 - Privileged integration behavior must be validated on a disposable Windows test machine; automated tests never alter registry, services, networking, power plans, or installed applications.
-- HolmesKit retains the original latest-backup model rather than backup history.
+- The retained baseline has a previous journal envelope, not a general backup history. Adapter/scope changes and interrupted operations require manual review.
+- The hardening changes have isolated automated coverage but still require native apply/recover and accessibility/DPI checks on disposable Windows VMs before a public release.
 - Application sizes come from optional Windows uninstall-registry estimates. Missing values are shown as unavailable, and reported sizes may differ from actual disk usage.
 - CPU utilization is an on-demand Windows snapshot rather than continuous monitoring.
 - Windows editions and organization policies can reject individual service, TCP, power, or registry commands. Diagnostics remain visible and logged.

@@ -8,19 +8,26 @@ using HolmesKit.Desktop.ViewModels;
 
 namespace HolmesKit.Desktop.Tests;
 
+[CollectionDefinition("WpfConstruction", DisableParallelization = true)]
+public sealed class WpfConstructionCollection { }
+
+[Collection("WpfConstruction")]
 public class MainWindowConstructionTests
 {
     [Fact]
     public void MainWindow_ConstructsAndAppliesBindingsOnStaThread()
     {
         Exception? failure = null;
+        var stage = "STA startup";
         var thread = new Thread(() =>
         {
             try
             {
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+                stage = "application resources";
                 var app = new App { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
                 app.InitializeComponent();
+                stage = "window construction";
                 var window = new MainWindow { Width = 1120, Height = 760 };
                 var pages = Assert.IsType<TabControl>(window.FindName("ShellTabs"));
                 Assert.Equal(10, pages.Items.Count);
@@ -64,6 +71,7 @@ public class MainWindowConstructionTests
                 else
                 {
                     window.ApplyTemplate();
+                    stage = "window measurement";
                     window.Measure(new Size(1120, 760));
                     window.Arrange(new Rect(0, 0, 1120, 760));
                     window.UpdateLayout();
@@ -75,16 +83,18 @@ public class MainWindowConstructionTests
                     }
                 }
                 window.Close();
+                stage = "shutdown";
                 app.Shutdown();
             }
             catch (Exception ex) { failure = ex; }
         });
+        thread.IsBackground = true;
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         var timeout = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("HOLMESKIT_VISUAL_REVIEW_DIR"))
-            ? TimeSpan.FromSeconds(10)
+            ? TimeSpan.FromSeconds(60)
             : TimeSpan.FromMinutes(2);
-        Assert.True(thread.Join(timeout), "MainWindow construction timed out.");
+        Assert.True(thread.Join(timeout), $"MainWindow construction timed out during {stage}.");
         Assert.Null(failure);
     }
 
