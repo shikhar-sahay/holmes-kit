@@ -29,6 +29,9 @@ public class RecoveryPolicyTests
     [InlineData("bad-multistring")]
     [InlineData("empty-binary")]
     [InlineData("changed-type")]
+    [InlineData("qword")]
+    [InlineData("expand-string")]
+    [InlineData("array-order")]
     public async Task RecoveryPolicy_IsolatedFromNativeWindows(string scenario)
     {
         var root = new HolmesKitPathResolver(AppContext.BaseDirectory).RootDirectory;
@@ -49,6 +52,9 @@ public class RecoveryPolicyTests
                 $j=New-HolmesJournal $scope 'machine-fixture' 'user-fixture'
                 Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture'
                 switch($env:HK_TEST_CASE){
+                  'qword' { $value=Convert-HolmesRegistryData ([pscustomobject]@{Kind='QWord';Data=[long]::MaxValue}); Check ($value -is [long] -and $value -eq [long]::MaxValue) 'QWORD precision lost' }
+                  'expand-string' { $value=Convert-HolmesRegistryData ([pscustomobject]@{Kind='ExpandString';Data='%TEMP%\fixture'}); Check ($value -ceq '%TEMP%\fixture') 'Expandable string was expanded' }
+                  'array-order' { Check (-not (Test-HolmesEqual ([pscustomobject]@{Data=@('one','two')}) ([pscustomobject]@{Data=@('two','one')}))) 'Array order was ignored' }
                   'property-order' { $a=[pscustomobject]@{Exists=$true;Kind='DWord';Data=7}; $b=[pscustomobject]@{Data=7;Kind='DWord';Exists=$true}; Check (Test-HolmesEqual $a $b) 'Property order caused false conflict' }
                   'null-dword' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='DWord';Data=$null}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
                   'fractional-qword' { $j.Entries[0].Before=[pscustomobject]@{Exists=$true;Kind='QWord';Data=1.5}; MustFail { Assert-HolmesJournal $j $scope 'machine-fixture' 'user-fixture' } }
