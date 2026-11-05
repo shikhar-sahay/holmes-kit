@@ -115,12 +115,15 @@ public sealed class MainViewModel : ObservableObject
     private async Task RunOperationAsync(object? parameter)
     {
         if (parameter is not OperationDefinition operation) return;
-        var message = $"{operation.Description}\n\nAffected: {operation.Affects}\nTradeoff: {operation.Tradeoff}\nRestart/logoff: {operation.Restart}\n\nHolmesKit will create or use its latest backup before applying changes. Continue?";
+        var safety = operation.IsRestore
+            ? "Recovery may overwrite settings or apply defaults; it does not guarantee exact original state."
+            : "Required registry backup must succeed first. The latest backup may replace an earlier baseline; deleted files and unsaved work cannot be recovered.";
+        var message = $"{operation.Description}\n\nAffected: {operation.Affects}\nTradeoff: {operation.Tradeoff}\nRestart/logoff: {operation.Restart}\n\n{safety} Continue?";
         if (Confirm?.Invoke(operation.Name, message) != true) return;
         await WithBusyAsync(operation.Name, async token =>
         {
             Activity.Clear();
-            Activity.Add("Creating or validating backup...");
+            Activity.Add(operation.IsRestore ? "Starting recovery..." : "Checking required backup prerequisite...");
             var progress = new Progress<string>(line => Activity.Add(line));
             var result = await service.RunOperationAsync(operation.Id, progress, token);
             if (result.WasCancelled) { Activity.Add("Operation cancelled."); Status = "Cancelled"; return; }

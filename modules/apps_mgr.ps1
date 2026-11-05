@@ -54,6 +54,8 @@ while ($running) {
     if ([int]::TryParse($choice, [ref]$idx)) {
         if ($idx -ge 1 -and $idx -le $apps.Count) {
             $app = $apps[$idx - 1]
+            $approval = Read-Host "  Launch the uninstaller for $($app.DisplayName)? [Y/N]"
+            if ($approval -ine 'Y') { Write-Host '  Cancelled.'; continue }
             Write-Host ""
             Write-Host "  Launching uninstaller for: $($app.DisplayName)" -ForegroundColor Yellow
             Write-Host "  The uninstaller may open a separate window." -ForegroundColor DarkGray
@@ -76,7 +78,7 @@ while ($running) {
                 Write-Host "  Could not launch uninstaller: $_" -ForegroundColor Red
             }
             Write-Host ""
-            Write-Host "  Done. Press any key to refresh..." -ForegroundColor Green
+            Write-Host "  Press any key to refresh..." -ForegroundColor DarkGray
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         } else {
             Write-Host "  Invalid selection." -ForegroundColor Red

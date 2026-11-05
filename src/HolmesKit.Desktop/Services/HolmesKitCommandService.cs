@@ -42,7 +42,8 @@ public sealed class HolmesKitCommandService(IProcessRunner runner, IHolmesKitPat
     public static ProcessRequest BuildBatchRequest(IHolmesKitPathResolver paths, string operationId)
     {
         var command = $"\"{paths.BatchFile}\" --run {operationId}";
-        return new(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", ["/d", "/s", "/c", command], paths.RootDirectory);
+        return new(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", ["/d", "/s", "/c", command], paths.RootDirectory,
+            $"/d /s /c \"{command}\"");
     }
 
     private async Task<T?> RunJsonAsync<T>(string action, IReadOnlyList<string> arguments, CancellationToken token)

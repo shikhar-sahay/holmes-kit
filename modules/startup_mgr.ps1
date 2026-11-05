@@ -213,6 +213,9 @@ while ($running) {
     if ([int]::TryParse($choice, [ref]$idx)) {
         if ($idx -ge 1 -and $idx -le $allEntries.Count) {
             $entry = $allEntries[$idx - 1]
+            if ($entry.Locked) { Write-Host '  This entry is protected.'; continue }
+            $approval = Read-Host "  Change the enabled state of $($entry.Name)? [Y/N]"
+            if ($approval -ine 'Y') { Write-Host '  Cancelled.'; continue }
             Write-Host ""
             if ($entry.Type -eq "Registry") { Toggle-RegistryEntry $entry } else { Toggle-SchedulerEntry $entry }
             Start-Sleep -Milliseconds 1200

@@ -3,7 +3,7 @@ using System.IO;
 
 namespace HolmesKit.Desktop.Services;
 
-public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory);
+public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, string? RawArguments = null);
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError, bool WasCancelled = false)
 {
     public bool Succeeded => ExitCode == 0 && !WasCancelled;
@@ -29,7 +29,9 @@ public sealed class ProcessRunner : IProcessRunner
             StandardOutputEncoding = System.Text.Encoding.UTF8,
             StandardErrorEncoding = System.Text.Encoding.UTF8
         };
-        foreach (var argument in request.Arguments) startInfo.ArgumentList.Add(argument);
+        // CMD parses /c command text itself; normal argv escaping changes its quote syntax.
+        if (request.RawArguments is not null) startInfo.Arguments = request.RawArguments;
+        else foreach (var argument in request.Arguments) startInfo.ArgumentList.Add(argument);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         try

@@ -30,22 +30,27 @@ powershell -NoProfile -Command ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
+set "HK_MAIN="
 set /p HK_MAIN=  ^> 
-if "%HK_MAIN%"=="0" goto apply_all
-if "%HK_MAIN%"=="1" goto core_menu
-if "%HK_MAIN%"=="2" goto advanced_menu
-if "%HK_MAIN%"=="3" goto gaming_menu
-if "%HK_MAIN%"=="4" goto restore_menu
-if "%HK_MAIN%"=="5" goto system_info
-if "%HK_MAIN%"=="6" goto startup_manager
-if "%HK_MAIN%"=="7" goto apps_manager
-if "%HK_MAIN%"=="8" exit /b 0
+if errorlevel 1 exit /b 3
+if "!HK_MAIN!"=="0" goto apply_all
+if "!HK_MAIN!"=="1" goto core_menu
+if "!HK_MAIN!"=="2" goto advanced_menu
+if "!HK_MAIN!"=="3" goto gaming_menu
+if "!HK_MAIN!"=="4" goto restore_menu
+if "!HK_MAIN!"=="5" goto system_info
+if "!HK_MAIN!"=="6" goto startup_manager
+if "!HK_MAIN!"=="7" goto apps_manager
+if "!HK_MAIN!"=="8" exit /b 0
 goto main_menu
 
 :: non-interactive entry point used by the desktop frontend
 :: Usage: HolmesKit.bat --run <operation-id>
 :command_dispatch
 set "HK_COMMAND=%~2"
+goto dispatch_selected
+
+:dispatch_selected
 if not defined HK_COMMAND (
     echo ERROR: Missing operation id.
     exit /b 2
@@ -77,51 +82,63 @@ exit /b 2
 call :run_full_core
 exit /b !errorlevel!
 :dispatch_cleanup_temp
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :cleanup_temp
 exit /b !errorlevel!
 :dispatch_power_high
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :apply_power_plan
 exit /b !errorlevel!
 :dispatch_cleanup_background
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :cleanup_background
 exit /b !errorlevel!
 :dispatch_ui_responsive
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :ui_responsiveness_tweaks
 exit /b !errorlevel!
 :dispatch_visual_performance
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :visual_performance_mode
 exit /b !errorlevel!
 :dispatch_startup_prune
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :startup_pruning
 exit /b !errorlevel!
 :dispatch_network_maintenance
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :network_maintenance
 exit /b !errorlevel!
 :dispatch_services_cleanup
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :services_cleanup
 exit /b !errorlevel!
 :dispatch_hibernation_disable
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :disable_hibernation
 exit /b !errorlevel!
 :dispatch_gaming_fps
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :gaming_fps_tweaks
 exit /b !errorlevel!
 :dispatch_gaming_latency
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :gaming_latency_maintenance
 exit /b !errorlevel!
 :dispatch_gaming_full
-call :ensure_backup || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
 call :gaming_full_prep
 exit /b !errorlevel!
 :dispatch_apply_all
@@ -160,21 +177,23 @@ powershell -NoProfile -Command ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
+set "HK_CORE="
 set /p HK_CORE=  ^> 
+if errorlevel 1 exit /b 3
 set "HK_RETURN_MENU=core"
-if "%HK_CORE%"=="1" (
+if "!HK_CORE!"=="1" (
   call :confirm_open "Run Full Core Optimization"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
     "Write-Host '  Runs all core steps in sequence: temp cleanup, High Performance' -ForegroundColor DarkGray;" ^
     "Write-Host '  power plan, background app termination, and Explorer restart.' -ForegroundColor DarkGray;" ^
     "Write-Host '';" ^
-    "Write-Host '  Affected: Temp folders, Power Plan, Background Processes, Explorer' -ForegroundColor Yellow;"
+    "Write-Host '  Deleted files and unsaved application work cannot be recovered.' -ForegroundColor Yellow; Write-Host '  Affected: Temp folders, Power Plan, Background Processes, Explorer' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :run_full_core & goto pause_return
-  goto core_menu
+  call :run_confirmed core-full
+  goto pause_return
 )
-if "%HK_CORE%"=="2" (
+if "!HK_CORE!"=="2" (
   call :confirm_open "Cleanup Temp And Cache Files"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -182,12 +201,12 @@ if "%HK_CORE%"=="2" (
     "Write-Host '  caches (NVIDIA DXCache, GLCache, D3DSCache). Also flushes the DNS' -ForegroundColor DarkGray;" ^
     "Write-Host '  resolver cache.' -ForegroundColor DarkGray;" ^
     "Write-Host '';" ^
-    "Write-Host '  Affected: Temp folders, DNS Cache, GPU Shader Caches' -ForegroundColor Yellow;"
+    "Write-Host '  Deleted files cannot be restored from the registry backup.' -ForegroundColor Yellow; Write-Host '  Affected: Temp folders, DNS Cache, GPU Shader Caches' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_temp & goto pause_return
-  goto core_menu
+  call :run_confirmed cleanup-temp
+  goto pause_return
 )
-if "%HK_CORE%"=="3" (
+if "!HK_CORE!"=="3" (
   call :confirm_open "Apply Power Plan Optimization"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -195,12 +214,12 @@ if "%HK_CORE%"=="3" (
     "Write-Host '  the CPU from throttling down during load and removes artificial' -ForegroundColor DarkGray;" ^
     "Write-Host '  frequency limits.' -ForegroundColor DarkGray;" ^
     "Write-Host '';" ^
-    "Write-Host '  Affected: Windows Power Plan (reversible via Restore menu)' -ForegroundColor Yellow;"
+    "Write-Host '  Recovery resets Windows schemes; the previous custom plan is not backed up.' -ForegroundColor Yellow; Write-Host '  Affected: Windows Power Plan' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :apply_power_plan & goto pause_return
-  goto core_menu
+  call :run_confirmed power-high
+  goto pause_return
 )
-if "%HK_CORE%"=="4" (
+if "!HK_CORE!"=="4" (
   call :confirm_open "Safe Background Cleanup"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -208,12 +227,12 @@ if "%HK_CORE%"=="4" (
     "Write-Host '  OneDrive, Teams, Spotify, Discord, Epic Games, Battle.net, Adobe' -ForegroundColor DarkGray;" ^
     "Write-Host '  background services, and open browsers.' -ForegroundColor DarkGray;" ^
     "Write-Host '';" ^
-    "Write-Host '  Affected: Running processes (apps can be reopened normally)' -ForegroundColor Yellow;"
+    "Write-Host '  Unsaved application work may be lost permanently.' -ForegroundColor Yellow; Write-Host '  Affected: Running processes (apps can be reopened normally)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :cleanup_background & goto pause_return
-  goto core_menu
+  call :run_confirmed cleanup-background
+  goto pause_return
 )
-if "%HK_CORE%"=="5" goto main_menu
+if "!HK_CORE!"=="5" goto main_menu
 goto core_menu
 
 :advanced_menu
@@ -232,9 +251,11 @@ powershell -NoProfile -Command ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
+set "HK_ADV="
 set /p HK_ADV=  ^> 
+if errorlevel 1 exit /b 3
 set "HK_RETURN_MENU=advanced"
-if "%HK_ADV%"=="1" (
+if "!HK_ADV!"=="1" (
   call :confirm_open "UI Responsiveness Tweaks"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -245,10 +266,10 @@ if "%HK_ADV%"=="1" (
     "Write-Host '';" ^
     "Write-Host '  Affected: Registry (HKCU\Control Panel\Desktop), NTFS flags' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :ui_responsiveness_tweaks & goto pause_return
-  goto advanced_menu
+  call :run_confirmed ui-responsive
+  goto pause_return
 )
-if "%HK_ADV%"=="2" (
+if "!HK_ADV!"=="2" (
   call :confirm_open "Visual Effects Performance Mode"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -258,10 +279,10 @@ if "%HK_ADV%"=="2" (
     "Write-Host '';" ^
     "Write-Host '  Affected: Registry (HKCU Explorer\VisualEffects, WindowMetrics)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :visual_performance_mode & goto pause_return
-  goto advanced_menu
+  call :run_confirmed visual-performance
+  goto pause_return
 )
-if "%HK_ADV%"=="3" (
+if "!HK_ADV!"=="3" (
   call :confirm_open "Startup Pruning"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -271,10 +292,10 @@ if "%HK_ADV%"=="3" (
     "Write-Host '';" ^
     "Write-Host '  Affected: Registry (HKCU\Run and HKLM\Run startup keys)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :startup_pruning & goto pause_return
-  goto advanced_menu
+  call :run_confirmed startup-prune
+  goto pause_return
 )
-if "%HK_ADV%"=="4" (
+if "!HK_ADV!"=="4" (
   call :confirm_open "Network Maintenance"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -284,10 +305,10 @@ if "%HK_ADV%"=="4" (
     "Write-Host '';" ^
     "Write-Host '  Affected: DNS Cache, IP Lease, Winsock, TCP/IP Stack (restart rec.)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :network_maintenance & goto pause_return
-  goto advanced_menu
+  call :run_confirmed network-maintenance
+  goto pause_return
 )
-if "%HK_ADV%"=="5" (
+if "!HK_ADV!"=="5" (
   call :confirm_open "Background Services Cleanup"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -297,10 +318,10 @@ if "%HK_ADV%"=="5" (
     "Write-Host '';" ^
     "Write-Host '  Affected: SysMain, WSearch, DiagTrack services (restorable)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :services_cleanup & goto pause_return
-  goto advanced_menu
+  call :run_confirmed services-cleanup
+  goto pause_return
 )
-if "%HK_ADV%"=="6" (
+if "!HK_ADV!"=="6" (
   call :confirm_open "Disable Hibernation"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -310,10 +331,10 @@ if "%HK_ADV%"=="6" (
     "Write-Host '';" ^
     "Write-Host '  Affected: Hibernation state, hiberfil.sys (frees disk space)' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :disable_hibernation & goto pause_return
-  goto advanced_menu
+  call :run_confirmed hibernation-disable
+  goto pause_return
 )
-if "%HK_ADV%"=="7" goto main_menu
+if "!HK_ADV!"=="7" goto main_menu
 goto advanced_menu
 
 :gaming_menu
@@ -329,9 +350,11 @@ powershell -NoProfile -Command ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
+set "HK_GAME="
 set /p HK_GAME=  ^> 
+if errorlevel 1 exit /b 3
 set "HK_RETURN_MENU=gaming"
-if "%HK_GAME%"=="1" (
+if "!HK_GAME!"=="1" (
   call :confirm_open "FPS Tweaks"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -342,10 +365,10 @@ if "%HK_GAME%"=="1" (
     "Write-Host '';" ^
     "Write-Host '  Affected: GameDVR keys, Multimedia Scheduler (MMCSS), Power Plan' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_fps_tweaks & goto pause_return
-  goto gaming_menu
+  call :run_confirmed gaming-fps
+  goto pause_return
 )
-if "%HK_GAME%"=="2" (
+if "!HK_GAME!"=="2" (
   call :confirm_open "Latency Maintenance"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -355,10 +378,10 @@ if "%HK_GAME%"=="2" (
     "Write-Host '';" ^
     "Write-Host '  Affected: TCP/IP stack, Winsock, Windows Update delivery services' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_latency_maintenance & goto pause_return
-  goto gaming_menu
+  call :run_confirmed gaming-latency
+  goto pause_return
 )
-if "%HK_GAME%"=="3" (
+if "!HK_GAME!"=="3" (
   call :confirm_open "Full Gaming Prep"
   powershell -NoProfile -Command ^
     "Write-Host '  What this does:' -ForegroundColor White;" ^
@@ -367,10 +390,10 @@ if "%HK_GAME%"=="3" (
     "Write-Host '';" ^
     "Write-Host '  Affected: All of the above combined' -ForegroundColor Yellow;"
   call :confirm_close
-  if "!HK_CONFIRMED!"=="1" call :ensure_backup & call :gaming_full_prep & goto pause_return
-  goto gaming_menu
+  call :run_confirmed gaming-full
+  goto pause_return
 )
-if "%HK_GAME%"=="4" goto main_menu
+if "!HK_GAME!"=="4" goto main_menu
 goto gaming_menu
 
 :restore_menu
@@ -389,20 +412,65 @@ powershell -NoProfile -Command ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
+set "HK_RETURN_MENU=restore"
+set "HK_RESTORE="
 set /p HK_RESTORE=  ^> 
-if "%HK_RESTORE%"=="1" (call :restore_latest_registry & goto pause_return)
-if "%HK_RESTORE%"=="2" (call :restore_power_defaults & goto pause_return)
-if "%HK_RESTORE%"=="3" (call :restore_services & goto pause_return)
-if "%HK_RESTORE%"=="4" (call :enable_hibernation & goto pause_return)
-if "%HK_RESTORE%"=="5" (call :restore_network_defaults & goto pause_return)
-if "%HK_RESTORE%"=="6" (call :restart_explorer & goto pause_return)
-if "%HK_RESTORE%"=="7" goto main_menu
+if errorlevel 1 exit /b 3
+if "!HK_RESTORE!"=="1" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restore-registry
+    goto pause_return
+)
+if "!HK_RESTORE!"=="2" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restore-power
+    goto pause_return
+)
+if "!HK_RESTORE!"=="3" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restore-services
+    goto pause_return
+)
+if "!HK_RESTORE!"=="4" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restore-hibernation
+    goto pause_return
+)
+if "!HK_RESTORE!"=="5" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restore-network
+    goto pause_return
+)
+if "!HK_RESTORE!"=="6" (
+    call :confirm_open "Restore and Recovery"
+    echo   This changes Windows configuration. Recovery may apply defaults,
+    echo   remove custom power plans, or overwrite settings; it is not exact rollback.
+    call :confirm_close
+    call :run_confirmed restart-explorer
+    goto pause_return
+)
+if "!HK_RESTORE!"=="7" goto main_menu
 goto restore_menu
 
 :pause_return
 set "HK_CONFIRMED=0"
 echo.
-powershell -NoProfile -Command "Write-Host '  Done. Press any key to return to the menu...' -ForegroundColor Green"
+powershell -NoProfile -Command "Write-Host '  Press any key to return to the menu...' -ForegroundColor Green"
 echo.
 pause >nul
 if "!HK_RETURN_MENU!"=="core"     goto core_menu
@@ -426,13 +494,41 @@ exit /b 0
 
 :: draws the bottom divider, prompt, and sets HK_CONFIRMED
 :confirm_close
+set "HK_CONFIRMED=0"
+set "HK_CONFIRM="
 echo.
 powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 echo.
 set /p HK_CONFIRM=  Proceed? [Y/N]:  
+if errorlevel 1 (
+    echo   Cancelled: blank or unavailable confirmation input.
+    exit /b 3
+)
 if /I "!HK_CONFIRM!"=="Y" set "HK_CONFIRMED=1"
+if /I "!HK_CONFIRM!"=="N" (
+    echo   Declined. No operation was started.
+) else if "!HK_CONFIRMED!"=="0" (
+    echo   Invalid confirmation. No operation was started.
+)
 echo.
 exit /b 0
+
+:: Consume authorization once; GUI calls the dispatcher after its own dialog.
+:run_confirmed
+if not "!HK_CONFIRMED!"=="1" (
+    echo   Cancelled. No operation was started.
+    exit /b 3
+)
+set "HK_CONFIRMED=0"
+set "HK_COMMAND=%~1"
+call :dispatch_selected
+set "HK_RESULT=!errorlevel!"
+if "!HK_RESULT!"=="0" (
+    echo   Operation completed successfully.
+) else (
+    echo   Operation failed. Some changes may already have been made; review the log.
+)
+exit /b %HK_RESULT%
 
 :: logo
 :print_header
@@ -489,8 +585,9 @@ powershell -NoProfile -Command "Write-Host '  A restore point is strongly recomm
 echo.
 powershell -NoProfile -Command "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray"
 echo.
+set "HK_RP="
 set /p HK_RP=  Create a restore point now? [Y/N]:  
-if /I "%HK_RP%"=="Y" call :create_restore_point
+if /I "!HK_RP!"=="Y" call :create_restore_point
 exit /b 0
 
 :: open system protection window for user to create restore point manually
@@ -510,6 +607,10 @@ exit /b 0
 :ensure_backup
 if "%HK_BACKUP_READY%"=="1" exit /b 0
 if exist "%HK_LATEST%" rd /s /q "%HK_LATEST%" >nul 2>&1
+if exist "%HK_LATEST%" (
+    echo ERROR: Could not replace the previous backup. No operation was started.
+    exit /b 1
+)
 md "%HK_LATEST%" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Could not create the backup directory.
@@ -532,6 +633,7 @@ call :export_key "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\S
 call :export_key "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" "tcpip_params.reg"
 if "!HK_BACKUP_FAILED!"=="1" (
     powershell -NoProfile -Command "Write-Host '  Registry backup failed. No changes were applied.' -ForegroundColor Red"
+    echo ERROR: Required backup failed. Protected operation was not started.
     call :log "Registry backup failed"
     exit /b 1
 )
@@ -544,20 +646,32 @@ exit /b 0
 :export_key
 reg query "%~1" >nul 2>&1
 if errorlevel 1 (
+    powershell -NoProfile -Command "try { $p='%~1' -replace '^HKCU','HKCU:' -replace '^HKLM','HKLM:'; Get-Item -LiteralPath $p -EA Stop | Out-Null; exit 1 } catch [System.Management.Automation.ItemNotFoundException] { exit 0 } catch { Write-Error $_; exit 1 }"
+    if errorlevel 1 (
+        set "HK_BACKUP_FAILED=1"
+        exit /b 1
+    )
     echo %~1^|%~2>>"%HK_LATEST%\absent_keys.txt"
+    if errorlevel 1 set "HK_BACKUP_FAILED=1"
     exit /b 0
 )
 reg export "%~1" "%HK_LATEST%\%~2" /y >nul 2>&1
 if errorlevel 1 set "HK_BACKUP_FAILED=1"
+if not exist "%HK_LATEST%\%~2" set "HK_BACKUP_FAILED=1"
 exit /b 0
 
 :: core: runs all four steps in sequence
 :run_full_core
-call :ensure_backup || exit /b !errorlevel!
-call :cleanup_temp || exit /b !errorlevel!
-call :apply_power_plan || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
+call :cleanup_temp
+if errorlevel 1 exit /b 1
+call :apply_power_plan
+if errorlevel 1 exit /b 1
 call :cleanup_background
+if errorlevel 1 exit /b 1
 call :restart_explorer
+if errorlevel 1 exit /b 1
 call :log "Full core optimization completed"
 powershell -NoProfile -Command "Write-Host '  Full Core Optimization Completed.' -ForegroundColor Green"
 echo.
@@ -568,14 +682,32 @@ exit /b 0
 call :log "Starting temp/cache cleanup"
 powershell -NoProfile -Command "Write-Host '  [*] Cleaning Temp And Cache Folders...' -ForegroundColor Cyan"
 echo.
-call :purge_dir "%TEMP%"
-call :purge_dir "%LOCALAPPDATA%\Temp"
-call :purge_dir "%SystemRoot%\Temp"
-if exist "%LOCALAPPDATA%\Microsoft\Windows\INetCache" call :purge_dir "%LOCALAPPDATA%\Microsoft\Windows\INetCache"
-if exist "%LOCALAPPDATA%\D3DSCache" call :purge_dir "%LOCALAPPDATA%\D3DSCache"
-if exist "%LOCALAPPDATA%\NVIDIA\DXCache" call :purge_dir "%LOCALAPPDATA%\NVIDIA\DXCache"
-if exist "%LOCALAPPDATA%\NVIDIA\GLCache" call :purge_dir "%LOCALAPPDATA%\NVIDIA\GLCache"
-ipconfig /flushdns >nul 2>&1
+set "HK_CLEAN_FAILED=0"
+call :purge_dir "%TEMP%" || set "HK_CLEAN_FAILED=1"
+call :purge_dir "%LOCALAPPDATA%\Temp" || set "HK_CLEAN_FAILED=1"
+call :purge_dir "%SystemRoot%\Temp" || set "HK_CLEAN_FAILED=1"
+if exist "%LOCALAPPDATA%\Microsoft\Windows\INetCache" (
+    call :purge_dir "%LOCALAPPDATA%\Microsoft\Windows\INetCache"
+    if errorlevel 1 set "HK_CLEAN_FAILED=1"
+)
+if exist "%LOCALAPPDATA%\D3DSCache" (
+    call :purge_dir "%LOCALAPPDATA%\D3DSCache"
+    if errorlevel 1 set "HK_CLEAN_FAILED=1"
+)
+if exist "%LOCALAPPDATA%\NVIDIA\DXCache" (
+    call :purge_dir "%LOCALAPPDATA%\NVIDIA\DXCache"
+    if errorlevel 1 set "HK_CLEAN_FAILED=1"
+)
+if exist "%LOCALAPPDATA%\NVIDIA\GLCache" (
+    call :purge_dir "%LOCALAPPDATA%\NVIDIA\GLCache"
+    if errorlevel 1 set "HK_CLEAN_FAILED=1"
+)
+ipconfig /flushdns || set "HK_CLEAN_FAILED=1"
+if "!HK_CLEAN_FAILED!"=="1" (
+    echo WARNING: Cleanup partially failed. In-use or inaccessible files may remain.
+    call :log "Temp cleanup partially failed"
+    exit /b 1
+)
 call :log "Temp/cache cleanup complete"
 powershell -NoProfile -Command "Write-Host '  Temp Cleanup Completed.' -ForegroundColor Green"
 echo.
@@ -583,9 +715,13 @@ exit /b 0
 
 :purge_dir
 if not exist "%~1" exit /b 0
-del /f /s /q "%~1\*" >nul 2>&1
-for /d %%D in ("%~1\*") do rd /s /q "%%~fD" >nul 2>&1
-exit /b 0
+set "HK_PURGE_FAILED=0"
+del /f /s /q "%~1\*" >nul 2>&1 || set "HK_PURGE_FAILED=1"
+for /d %%D in ("%~1\*") do (
+    rd /s /q "%%~fD" >nul 2>&1
+    if exist "%%~fD" set "HK_PURGE_FAILED=1"
+)
+exit /b %HK_PURGE_FAILED%
 
 :: core: switch to high performance plan
 :apply_power_plan
@@ -622,12 +758,20 @@ exit /b 0
 call :log "Terminating background processes"
 powershell -NoProfile -Command "Write-Host '  [*] Terminating Background Apps...' -ForegroundColor Cyan"
 echo.
+set "HK_PROCESS_FAILED=0"
 for %%P in (
     OneDrive.exe Teams.exe ms-teams.exe Spotify.exe Discord.exe
     EpicGamesLauncher.exe EpicWebHelper.exe Battle.net.exe
     AdobeIPCBroker.exe CCXProcess.exe AdobeGCClient.exe
     msedge.exe chrome.exe firefox.exe
-) do taskkill /f /im "%%P" >nul 2>&1
+) do (
+    taskkill /f /im "%%P" >nul 2>&1
+    if errorlevel 1 if not "!errorlevel!"=="128" set "HK_PROCESS_FAILED=1"
+)
+if "!HK_PROCESS_FAILED!"=="1" (
+    echo ERROR: Some background processes could not be closed.
+    exit /b 1
+)
 call :log "Background cleanup complete"
 powershell -NoProfile -Command "Write-Host '  Background Cleanup Completed.' -ForegroundColor Green"
 echo.
@@ -653,6 +797,7 @@ if "!HK_STEP_FAILED!"=="1" (
     exit /b 1
 )
 call :restart_explorer
+if errorlevel 1 exit /b 1
 call :log "UI responsiveness tweaks applied"
 powershell -NoProfile -Command "Write-Host '  UI Responsiveness Tweaks Applied.' -ForegroundColor Green"
 echo.
@@ -674,6 +819,7 @@ if "!HK_STEP_FAILED!"=="1" (
     exit /b 1
 )
 call :restart_explorer
+if errorlevel 1 exit /b 1
 call :log "Visual effects performance mode applied"
 powershell -NoProfile -Command "Write-Host '  Visual Effects Performance Mode Applied.' -ForegroundColor Green"
 echo.
@@ -684,23 +830,28 @@ exit /b 0
 call :log "Running startup pruning"
 powershell -NoProfile -Command "Write-Host '  [*] Removing Startup Entries...' -ForegroundColor Cyan"
 echo.
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "OneDrive"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Discord"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Spotify"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Skype"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Zoom"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "EpicGamesLauncher"
-call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "com.squirrel.Teams.Teams"
-call :del_run "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" "OneDrive"
-call :del_run "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" "TeamsMachineInstaller"
+set "HK_PRUNE_FAILED=0"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "OneDrive" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Discord" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Spotify" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Skype" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "Zoom" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "EpicGamesLauncher" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" "com.squirrel.Teams.Teams" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" "OneDrive" || set "HK_PRUNE_FAILED=1"
+call :del_run "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" "TeamsMachineInstaller" || set "HK_PRUNE_FAILED=1"
+if "!HK_PRUNE_FAILED!"=="1" (
+    echo ERROR: Some startup entries could not be removed.
+    exit /b 1
+)
 call :log "Startup pruning complete"
 powershell -NoProfile -Command "Write-Host '  Startup Pruning Completed.' -ForegroundColor Green"
 echo.
 exit /b 0
 
 :del_run
-reg delete "%~1" /v "%~2" /f >nul 2>&1
-exit /b 0
+powershell -NoProfile -Command "try { $p='%~1' -replace '^HKCU','HKCU:' -replace '^HKLM','HKLM:'; $k=Get-Item -LiteralPath $p -EA Stop; if ($k.GetValueNames() -contains '%~2') { Remove-ItemProperty -LiteralPath $p -Name '%~2' -EA Stop }; exit 0 } catch [System.Management.Automation.ItemNotFoundException] { exit 0 } catch { Write-Error $_; exit 1 }"
+exit /b %errorlevel%
 
 :: advanced: flush/reset network stack
 :network_maintenance
@@ -777,7 +928,8 @@ exit /b 0
 call :log "Applying gaming FPS tweaks"
 powershell -NoProfile -Command "Write-Host '  [*] Applying FPS Tweaks...' -ForegroundColor Cyan"
 echo.
-call :apply_power_plan || exit /b !errorlevel!
+call :apply_power_plan
+if errorlevel 1 exit /b 1
 set "HK_STEP_FAILED=0"
 reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
@@ -788,8 +940,10 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d "0" /f >nul 2>&1 || set "HK_STEP_FAILED=1"
 if "!HK_STEP_FAILED!"=="1" exit /b 1
-call :visual_performance_mode || exit /b !errorlevel!
+call :visual_performance_mode
+if errorlevel 1 exit /b 1
 call :cleanup_background
+if errorlevel 1 exit /b 1
 call :log "Gaming FPS tweaks applied"
 powershell -NoProfile -Command "Write-Host '  FPS Tweaks Applied.' -ForegroundColor Green"
 echo.
@@ -810,6 +964,7 @@ powershell -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Se
 if "!HK_STEP_FAILED!"=="1" exit /b 1
 for %%S in (DoSvc BITS) do net stop %%S >nul 2>&1
 call :cleanup_background
+if errorlevel 1 exit /b 1
 call :log "Gaming latency maintenance applied"
 powershell -NoProfile -Command "Write-Host '  Latency Maintenance Applied. A Restart May Improve Effect.' -ForegroundColor Green"
 echo.
@@ -817,8 +972,10 @@ exit /b 0
 
 :: gaming: fps + latency in one shot
 :gaming_full_prep
-call :gaming_fps_tweaks || exit /b !errorlevel!
-call :gaming_latency_maintenance || exit /b !errorlevel!
+call :gaming_fps_tweaks
+if errorlevel 1 exit /b 1
+call :gaming_latency_maintenance
+if errorlevel 1 exit /b 1
 call :log "Full gaming prep completed"
 powershell -NoProfile -Command "Write-Host '  Full Gaming Prep Completed.' -ForegroundColor Green"
 echo.
@@ -858,6 +1015,7 @@ if "!HK_STEP_FAILED!"=="1" (
     exit /b 1
 )
 call :restart_explorer
+if errorlevel 1 exit /b 1
 call :log "Registry restoration completed"
 powershell -NoProfile -Command "Write-Host '  Registry Restoration Completed.' -ForegroundColor Green"
 echo.
@@ -939,23 +1097,35 @@ exit /b 0
 :: restart explorer to apply registry changes
 :restart_explorer
 call :log "Restarting Explorer"
-taskkill /f /im explorer.exe >nul 2>&1
+taskkill /f /im explorer.exe
+if errorlevel 1 if not "!errorlevel!"=="128" exit /b 1
 start "" explorer.exe
-exit /b 0
+exit /b %errorlevel%
 
 :: shared non-interactive implementation of Apply All
 :run_apply_all
-call :ensure_backup || exit /b !errorlevel!
-call :cleanup_temp || exit /b !errorlevel!
-call :apply_power_plan || exit /b !errorlevel!
-call :cleanup_background || exit /b !errorlevel!
-call :ui_responsiveness_tweaks || exit /b !errorlevel!
-call :visual_performance_mode || exit /b !errorlevel!
-call :startup_pruning || exit /b !errorlevel!
-call :services_cleanup || exit /b !errorlevel!
-call :disable_hibernation || exit /b !errorlevel!
-call :gaming_fps_tweaks || exit /b !errorlevel!
-call :gaming_latency_maintenance || exit /b !errorlevel!
+call :ensure_backup
+if errorlevel 1 exit /b 1
+call :cleanup_temp
+if errorlevel 1 exit /b 1
+call :apply_power_plan
+if errorlevel 1 exit /b 1
+call :cleanup_background
+if errorlevel 1 exit /b 1
+call :ui_responsiveness_tweaks
+if errorlevel 1 exit /b 1
+call :visual_performance_mode
+if errorlevel 1 exit /b 1
+call :startup_pruning
+if errorlevel 1 exit /b 1
+call :services_cleanup
+if errorlevel 1 exit /b 1
+call :disable_hibernation
+if errorlevel 1 exit /b 1
+call :gaming_fps_tweaks
+if errorlevel 1 exit /b 1
+call :gaming_latency_maintenance
+if errorlevel 1 exit /b 1
 call :log "Apply All completed"
 exit /b 0
 
@@ -1010,15 +1180,15 @@ powershell -NoProfile -Command ^
   "Write-Host '    TCP Fast Open on. Nagle off per adapter. RSS on.' -ForegroundColor DarkGray;" ^
   "Write-Host '    TCP autotuning disabled. Windows Update delivery paused.' -ForegroundColor DarkGray;" ^
   "Write-Host '';" ^
-  "Write-Host '  Registry backed up before anything runs. All reversible.' -ForegroundColor Yellow;" ^
-  "Write-Host '  A restart is recommended after this completes.' -ForegroundColor Yellow;" ^
+  "Write-Host '  Required registry backup must succeed first. Recovery is limited.' -ForegroundColor Yellow;" ^
+  "Write-Host '  Deleted files and unsaved work cannot be restored.' -ForegroundColor Yellow; Write-Host '  A restart is recommended after this completes.' -ForegroundColor Yellow;" ^
   "Write-Host '';" ^
   "Write-Host '  ------------------------------------------------------------------------' -ForegroundColor DarkGray;"
 echo.
-set /p HK_APPLYALL=  Proceed? [Y/N]:  
-if /I "!HK_APPLYALL!" NEQ "Y" goto main_menu
+call :confirm_close
+if not "!HK_CONFIRMED!"=="1" goto main_menu
 echo.
-call :run_apply_all
+call :run_confirmed apply-all
 if errorlevel 1 (
     powershell -NoProfile -Command "Write-Host '  Apply All stopped because a step failed.' -ForegroundColor Red"
     goto pause_return

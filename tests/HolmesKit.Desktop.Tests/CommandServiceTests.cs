@@ -6,6 +6,22 @@ namespace HolmesKit.Desktop.Tests;
 public class CommandServiceTests
 {
     [Fact]
+    public async Task RealDesktopBatchBoundary_PropagatesPrerequisiteFailureWithoutInput()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "HolmesKit Boundary " + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, "HolmesKit.bat"), "@echo off\r\necho Required backup failed\r\nexit /b 1\r\n");
+            var service = new HolmesKitCommandService(new ProcessRunner(), new FakePaths(directory));
+            var result = await service.RunOperationAsync("power-high", null, TestContext.Current.CancellationToken);
+            Assert.False(result.Succeeded);
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Required backup failed", result.StandardOutput);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+    [Fact]
     public void BatchRequest_UsesResolvedPathsAndNonInteractiveOperation()
     {
         var paths = new FakePaths(@"C:\Holmes Kit");
