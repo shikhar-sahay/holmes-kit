@@ -100,9 +100,9 @@ public class CliSafetyTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ActualBackupOrchestration_RequiresEveryExport(bool exportFails)
+    public async Task DispatcherRecoveryValidation_RequiresSuccess(bool exportFails)
     {
-        var result = await Run("command_dispatch", "", arguments: "--run power-high", realBackup: true, exportFails: exportFails);
+        var result = await Run("command_dispatch", "", arguments: "--run power-high", backupFails: exportFails);
         Assert.Equal(exportFails ? 1 : 0, result.ExitCode);
         if (exportFails)
         {
@@ -115,18 +115,19 @@ public class CliSafetyTests
     // Only explicitly allowlisted CONTROL FLOW is copied. All other labels become inert stubs.
     // No real modifying engine body or external command is ever executed by this fixture.
     private static async Task<(int ExitCode, string Output)> Run(string entry, string input,
-        bool backupFails = false, string arguments = "", string prelude = "", string failedStep = "",
-        bool realBackup = false, bool exportFails = false)
+        bool backupFails = false, string arguments = "", string prelude = "", string failedStep = "")
     {
         var root = new Services.HolmesKitPathResolver(AppContext.BaseDirectory).RootDirectory;
         var source = File.ReadAllText(Path.Combine(root, "HolmesKit.bat"));
         var control = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "main_menu", "command_dispatch", "dispatch_selected", "core_menu", "advanced_menu", "gaming_menu",
+            "main_menu", "command_dispatch", "dispatch_selected", "dispatch_engine", "core_menu", "advanced_menu", "gaming_menu",
             "restore_menu", "confirm_open", "confirm_close", "run_confirmed", "apply_all", "run_apply_all",
             "run_full_core", "gaming_full_prep"
         };
         var fixture = new StringBuilder("@echo off\r\nsetlocal EnableExtensions EnableDelayedExpansion\r\n");
+        // Exercise the native dispatcher with inert leaves, never launch the recovery/native adapter.
+        fixture.AppendLine("set HK_RECOVERY_CHILD=1");
         fixture.AppendLine(prelude);
         fixture.AppendLine("set HK_LATEST=%CD%\\latest\r\nset HK_BACKUP_READY=0");
         fixture.AppendLine("goto " + entry);
@@ -137,17 +138,12 @@ public class CliSafetyTests
             var label = block.Groups[1].Value;
             fixture.AppendLine(":" + label);
             if (label == "pause_return") { fixture.AppendLine("exit /b 0"); continue; }
-            if (label == "export_key" && realBackup)
-            {
-                fixture.AppendLine(exportFails ? "set HK_BACKUP_FAILED=1\r\nexit /b 1" : "exit /b 0");
-                continue;
-            }
-            if (label == "ensure_backup" && !realBackup)
+            if (label == "ensure_backup")
             {
                 fixture.AppendLine(backupFails ? "echo ERROR: Required backup failed.\r\nexit /b 1" : "echo BACKUP\r\nexit /b 0");
                 continue;
             }
-            if (!control.Contains(label) && !label.StartsWith("dispatch_") && !(realBackup && label == "ensure_backup"))
+            if (!control.Contains(label) && !label.StartsWith("dispatch_"))
             {
                 fixture.AppendLine($"echo MUTATE:{label}\r\nexit /b {(label == failedStep ? 1 : 0)}");
                 continue;

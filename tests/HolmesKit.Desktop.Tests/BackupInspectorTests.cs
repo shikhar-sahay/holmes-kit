@@ -29,15 +29,15 @@ public class BackupInspectorTests
     }
 
     [Fact]
-    public void CompleteAbsentKeyManifest_IsAValidBackup()
+    public void LegacyManifest_IsPreservedButNotAutomaticallyRestorable()
     {
         WithTemporaryDirectory(path =>
         {
             File.WriteAllLines(Path.Combine(path, "absent_keys.txt"), AbsentEntries);
             var result = BackupInspector.Inspect(path);
             Assert.True(result.Exists);
-            Assert.True(result.IsValid);
-            Assert.NotNull(result.Timestamp);
+            Assert.False(result.IsValid);
+            Assert.Contains("Legacy", result.Summary);
         });
     }
 
@@ -50,7 +50,7 @@ public class BackupInspectorTests
             var result = BackupInspector.Inspect(path);
             Assert.True(result.Exists);
             Assert.False(result.IsValid);
-            Assert.Contains("missing", result.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Legacy", result.Summary, StringComparison.OrdinalIgnoreCase);
         });
     }
 

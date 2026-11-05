@@ -24,6 +24,11 @@ function ConvertFrom-HolmesData([string]$Value) {
     return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Value))
 }
 
+function Assert-HolmesUninstallerPath([string]$Path) {
+    if (-not [IO.Path]::IsPathRooted($Path) -or [IO.Path]::GetExtension($Path) -ine '.exe' -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw 'Uninstaller must be an existing absolute executable path.' }
+    if ([IO.Path]::GetFileName($Path) -in @('cmd.exe','powershell.exe','pwsh.exe','wscript.exe','cscript.exe','mshta.exe','rundll32.exe','regsvr32.exe')) { throw 'Interpreter-based uninstall commands require manual review in Windows Settings.' }
+}
+
 $protectedPaths = @(
     '\Microsoft\Windows\AppID\', '\Microsoft\Windows\AppxDeploymentClient\',
     '\Microsoft\Windows\CertificateServicesClient\', '\Microsoft\Windows\MUI\',
@@ -176,6 +181,12 @@ try {
         'startup-toggle' {
             if ($Data.Count -lt 1) { throw 'Startup entry data is missing.' }
             $entry = (ConvertFrom-HolmesData $Data[0]) | ConvertFrom-Json
+            # Resolve an identity against current enumeration, never trust caller-supplied paths/locks.
+            $matches = @(@(Get-RegistryStartups) + @(Get-SchedulerStartups) | Where-Object {
+                $_.Type -eq $entry.Type -and $_.Hive -eq $entry.Hive -and $_.RegPath -eq $entry.RegPath -and $_.Name -ceq $entry.Name
+            })
+            if ($matches.Count -ne 1) { throw 'Startup identity is stale or ambiguous; refresh the list.' }
+            $entry = $matches[0]
             if ($entry.Locked) { throw 'This startup entry is protected and cannot be changed.' }
             if ($entry.Type -eq 'Registry') {
                 if (-not (Test-Path $entry.ApprovedPath)) { New-Item -Path $entry.ApprovedPath -Force | Out-Null }
@@ -215,17 +226,28 @@ try {
             if ($Data.Count -lt 2) { throw 'Application uninstall data is missing.' }
             $uninstall = ConvertFrom-HolmesData $Data[0]
             $name = ConvertFrom-HolmesData $Data[1]
-            if ($uninstall -match '(?i)MsiExec') {
+            $registered = @(@('HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*') | ForEach-Object {
+                Get-ItemProperty $_ -ErrorAction SilentlyContinue
+            } | Where-Object { $_.DisplayName -ceq $name -and $_.UninstallString -ceq $uninstall })
+            if ($registered.Count -lt 1) { throw 'Application registration changed; refresh before uninstalling.' }
+            if ($uninstall -match '(?i)^"?(?:[A-Z]:\\[^"\r\n]*\\)?MsiExec(?:\.exe)?"?\s') {
                 $guid = [regex]::Match($uninstall, '\{[^}]+\}').Value
-                if ($guid) { $process = Start-Process msiexec.exe -ArgumentList @('/x', $guid, '/qb') -Wait -PassThru }
-                else { $process = Start-Process msiexec.exe -ArgumentList ($uninstall -replace '(?i)^.*?MsiExec(?:\.exe)?\s*','') -Wait -PassThru }
+                $product = [guid]::Empty
+                if ($guid -and [guid]::TryParse($guid,[ref]$product)) { $process = Start-Process "$env:SystemRoot\System32\msiexec.exe" -ArgumentList @('/x', $guid, '/qb') -Wait -PassThru }
+                else { throw 'MSI registration has no valid product GUID. Use Windows Settings.' }
             } elseif ($uninstall -match '^"([^"]+)"(.*)$') {
-                $process = Start-Process $Matches[1] -ArgumentList $Matches[2].Trim() -Wait -PassThru
+                $exe = $Matches[1]; $arguments = $Matches[2].Trim()
+                Assert-HolmesUninstallerPath $exe
+                $process = Start-Process $exe -ArgumentList $arguments -Wait -PassThru
             } else {
-                $parts = $uninstall -split ' ', 2
-                $process = Start-Process $parts[0] -ArgumentList $(if ($parts.Count -gt 1) { $parts[1] } else { '' }) -Wait -PassThru
+                if ($uninstall -notmatch '^(\S+\.exe)(?:\s+(.*))?$') { throw 'Ambiguous unquoted uninstall command. Use Windows Settings to uninstall this application.' }
+                $exe = $Matches[1]; $arguments = $Matches[2]
+                Assert-HolmesUninstallerPath $exe
+                $process = Start-Process $exe -ArgumentList $arguments -Wait -PassThru
             }
-            if ($process.ExitCode -notin @(0,1602,3010)) { throw "Uninstaller exited with code $($process.ExitCode)." }
+            if ($process.ExitCode -eq 1602) { Write-Output 'Uninstaller cancelled by user.'; exit 3 }
+            if ($process.ExitCode -eq 3010) { Write-Output 'Uninstaller finished; Windows restart required.'; exit 0 }
+            if ($process.ExitCode -ne 0) { throw "Uninstaller exited with code $($process.ExitCode)." }
             Write-HolmesLog "Uninstaller completed for: $name (exit $($process.ExitCode))"
             Write-Output "Uninstaller completed for $name."
         }

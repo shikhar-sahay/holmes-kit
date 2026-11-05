@@ -1,67 +1,44 @@
+using System.Text;
+using System.Text.Json;
+using System.Security.Cryptography;
+
 namespace HolmesKit.Desktop.Services;
 
 public sealed record BackupInspection(bool IsValid, bool Exists, DateTime? Timestamp, string Summary);
 
 public static class BackupInspector
 {
-    private static readonly (string Key, string File)[] ExpectedEntries =
-    [
-        (@"HKCU\Control Panel\Desktop", "desktop.reg"),
-        (@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "visualeffects.reg"),
-        (@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "explorer_advanced.reg"),
-        (@"HKCU\Control Panel\Desktop\WindowMetrics", "windowmetrics.reg"),
-        (@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "hkcu_run.reg"),
-        (@"HKLM\Software\Microsoft\Windows\CurrentVersion\Run", "hklm_run.reg"),
-        (@"HKCU\System\GameConfigStore", "gameconfigstore.reg"),
-        (@"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR", "gamedvr.reg"),
-        (@"HKLM\Software\Policies\Microsoft\Windows\GameDVR", "gamedvr_policy.reg"),
-        (@"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", "mm_games.reg"),
-        (@"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "mm_profile.reg"),
-        (@"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "tcpip_params.reg")
-    ];
-
     public static BackupInspection Inspect(string directory)
     {
-        if (!Directory.Exists(directory)) return new(false, false, null, "No HolmesKit backup has been created.");
+        var journal = Path.Combine(Path.GetDirectoryName(directory)!, "recovery", "baseline.json");
+        if (File.Exists(journal)) return InspectJournal(journal);
+        return Directory.Exists(directory)
+            ? new(false, true, null, "Legacy registry exports preserved. Automatic import is disabled; manual review is required.")
+            : new(false, false, null, "No HolmesKit recovery baseline has been created.");
+    }
 
+    public static BackupInspection InspectJournal(string path)
+    {
         try
         {
-            var absentPath = Path.Combine(directory, "absent_keys.txt");
-            var absent = File.Exists(absentPath)
-                ? File.ReadLines(absentPath).Select(ParseAbsentEntry).Where(x => x is not null).ToHashSet()
-                : [];
-            var timestamps = new List<DateTime>();
-            if (File.Exists(absentPath)) timestamps.Add(File.GetLastWriteTime(absentPath));
-
-            foreach (var expected in ExpectedEntries)
-            {
-                var path = Path.Combine(directory, expected.File);
-                if (File.Exists(path))
-                {
-                    using var reader = File.OpenText(path);
-                    if (!string.Equals(reader.ReadLine()?.TrimStart('\uFEFF'), "Windows Registry Editor Version 5.00", StringComparison.Ordinal))
-                        return new(false, true, Latest(timestamps), $"Backup is incomplete: {expected.File} is not a valid registry export.");
-                    timestamps.Add(File.GetLastWriteTime(path));
-                }
-                else if (!absent.Contains($"{expected.Key}|{expected.File}"))
-                {
-                    return new(false, true, Latest(timestamps), $"Backup is incomplete: {expected.File} is missing.");
-                }
-            }
-
-            return new(true, true, Latest(timestamps), "Complete registry backup available.");
+            if (new FileInfo(path).Length > 4 * 1024 * 1024) throw new InvalidDataException("Journal is too large.");
+            using var envelope = JsonDocument.Parse(File.ReadAllText(path));
+            var payload = envelope.RootElement.GetProperty("Payload").GetString()!;
+            var hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+            if (hash != envelope.RootElement.GetProperty("Sha256").GetString()) throw new InvalidDataException("Integrity check failed.");
+            using var data = JsonDocument.Parse(payload);
+            var root = data.RootElement;
+            if (root.GetProperty("Version").GetInt32() != 1 || root.GetProperty("Status").GetString() != "Ready")
+                throw new InvalidDataException("Unsupported or interrupted recovery journal.");
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var machine = Convert.ToString(Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography", "MachineGuid", null));
+            if (root.GetProperty("User").GetString() != identity.User?.Value || root.GetProperty("Machine").GetString() != machine)
+                throw new InvalidDataException("Recovery journal belongs to a different machine or elevated account.");
+            if (root.GetProperty("Entries").GetArrayLength() == 0) throw new InvalidDataException("Recovery scope is empty.");
+            var timestamp = root.GetProperty("CreatedUtc").GetDateTime().ToLocalTime();
+            return new(true, true, timestamp, "Retained baseline: managed registry values, service states and active power plan. Restore revalidates identity/scope and skips conflicts. Network resets, NTFS and hibernation are not exact recovery.");
         }
-        catch (Exception ex)
-        {
-            return new(false, true, null, $"Backup could not be verified: {ex.Message}");
-        }
+        catch (Exception ex) { return new(false, true, null, $"Recovery journal unavailable: {ex.Message}"); }
     }
 
-    private static string? ParseAbsentEntry(string line)
-    {
-        var value = line.Trim();
-        return value.Count(c => c == '|') == 1 ? value : null;
-    }
-
-    private static DateTime? Latest(IReadOnlyCollection<DateTime> values) => values.Count == 0 ? null : values.Max();
 }
