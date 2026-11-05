@@ -3,7 +3,7 @@ using System.IO;
 
 namespace HolmesKit.Desktop.Services;
 
-public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, string? RawArguments = null);
+public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, string? RawArguments = null, bool AllowCancellation = true);
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError, bool WasCancelled = false)
 {
     public bool Succeeded => ExitCode == 0 && !WasCancelled;
@@ -18,6 +18,7 @@ public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(ProcessRequest request, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
+        if (!request.AllowCancellation) cancellationToken = CancellationToken.None;
         var startInfo = new ProcessStartInfo
         {
             FileName = request.FileName,
@@ -57,6 +58,7 @@ public sealed class ProcessRunner : IProcessRunner
         catch (OperationCanceledException)
         {
             try { if (!process.HasExited) process.Kill(true); } catch { }
+            try { await Task.WhenAll(outputTask, errorTask); } catch (OperationCanceledException) { }
             return new(-1, output.ToString(), errors.ToString(), true);
         }
     }
@@ -68,6 +70,7 @@ public sealed class ProcessRunner : IProcessRunner
             var line = await reader.ReadLineAsync(token);
             if (line is null) break;
             target.AppendLine(line);
+            if (target.Length > 524288) target.Remove(0, target.Length - 524288);
             if (!string.IsNullOrWhiteSpace(line)) progress?.Report(line.Trim());
         }
     }

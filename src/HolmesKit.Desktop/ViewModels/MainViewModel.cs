@@ -29,23 +29,25 @@ public sealed class MainViewModel : ObservableObject
     private bool hasBackup;
     private int selectedPageIndex;
     private int statusRevision;
+    public bool IsMutationRunning { get; private set; }
 
     public MainViewModel(IHolmesKitCommandService service, IHolmesKitPathResolver paths)
     {
         this.service = service;
         this.paths = paths;
-        RunOperationCommand = new AsyncRelayCommand(RunOperationAsync, p => p is OperationDefinition operation && !IsBusy && (operation.Id != "restore-registry" || HasBackup));
+        RunOperationCommand = new AsyncRelayCommand(RunOperationAsync, p => p is OperationDefinition operation && !IsBusy && (operation.Id is not ("restore-registry" or "restore-power" or "restore-services") || HasBackup));
         RefreshSystemCommand = new AsyncRelayCommand(_ => RefreshSystemAsync(), _ => !IsBusy);
         RefreshStartupCommand = new AsyncRelayCommand(_ => RefreshStartupAsync(), _ => !IsBusy);
         ToggleStartupCommand = new AsyncRelayCommand(ToggleStartupAsync, p => p is StartupEntry { Locked: false } && !IsBusy);
         RefreshApplicationsCommand = new AsyncRelayCommand(_ => RefreshApplicationsAsync(), _ => !IsBusy);
         UninstallCommand = new AsyncRelayCommand(UninstallAsync, p => p is InstalledApplication && !IsBusy);
-        RefreshLogsCommand = new RelayCommand(_ => RefreshLogs());
+        RefreshLogsCommand = new AsyncRelayCommand(_ => RefreshLogsAsync());
         OpenLogFolderCommand = new RelayCommand(_ => OpenLogFolder());
         CopyLogsCommand = new RelayCommand(_ => CopyLogs());
         ClearActivityCommand = new RelayCommand(_ => Activity.Clear());
         NavigateCommand = new RelayCommand(Navigate);
-        CancelCommand = new RelayCommand(_ => operationCancellation?.Cancel(), _ => IsBusy);
+        CancelCommand = new RelayCommand(_ => operationCancellation?.Cancel(), _ => IsBusy && !IsMutationRunning);
+        Activity.CollectionChanged += (_, _) => { if (Activity.Count > 1000) Activity.RemoveAt(0); };
         StartupView = CollectionViewSource.GetDefaultView(StartupEntries);
         StartupView.Filter = item => item is StartupEntry entry && (string.IsNullOrWhiteSpace(StartupFilter) || entry.Name.Contains(StartupFilter, StringComparison.CurrentCultureIgnoreCase) || entry.Command.Contains(StartupFilter, StringComparison.CurrentCultureIgnoreCase));
         ApplicationsView = CollectionViewSource.GetDefaultView(Applications);
@@ -70,7 +72,7 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ToggleStartupCommand { get; }
     public AsyncRelayCommand RefreshApplicationsCommand { get; }
     public AsyncRelayCommand UninstallCommand { get; }
-    public RelayCommand RefreshLogsCommand { get; }
+    public AsyncRelayCommand RefreshLogsCommand { get; }
     public RelayCommand OpenLogFolderCommand { get; }
     public RelayCommand CopyLogsCommand { get; }
     public RelayCommand ClearActivityCommand { get; }
@@ -107,7 +109,7 @@ public sealed class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        RefreshLogs();
+        await RefreshLogsAsync();
         UpdateBackupSummary();
         await RefreshSystemAsync();
     }
@@ -117,7 +119,7 @@ public sealed class MainViewModel : ObservableObject
         if (parameter is not OperationDefinition operation) return;
         var safety = operation.IsRestore
             ? "Recovery may overwrite settings or apply defaults; it does not guarantee exact original state."
-            : "Required registry backup must succeed first. The latest backup may replace an earlier baseline; deleted files and unsaved work cannot be recovered.";
+            : "The retained recovery baseline must validate first. Deleted files and unsaved work cannot be recovered. Cancellation is disabled while changes run.";
         var message = $"{operation.Description}\n\nAffected: {operation.Affects}\nTradeoff: {operation.Tradeoff}\nRestart/logoff: {operation.Restart}\n\n{safety} Continue?";
         if (Confirm?.Invoke(operation.Name, message) != true) return;
         await WithBusyAsync(operation.Name, async token =>
@@ -130,14 +132,22 @@ public sealed class MainViewModel : ObservableObject
             if (!result.Succeeded)
             {
                 var detail = string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput : result.StandardError;
+                if (result.ExitCode == 4)
+                {
+                    Status = "Partial";
+                    Activity.Add("Recovery partially completed; conflicts or unavailable settings were skipped.");
+                    Activity.Add(detail);
+                    AppendGuiLog($"{operation.Id}: partial recovery: {detail}");
+                    return;
+                }
                 Activity.Add($"Failed (exit code {result.ExitCode}).");
                 throw new InvalidOperationException(string.IsNullOrWhiteSpace(detail) ? "The HolmesKit command failed without diagnostic output." : detail.Trim());
             }
             Activity.Add("Completed successfully.");
             Status = "Completed";
-            RefreshLogs();
+            await RefreshLogsAsync();
             UpdateBackupSummary();
-        });
+        }, mutation: true);
     }
 
     private async Task RefreshSystemAsync() => await WithBusyAsync("Refreshing system information", async token =>
@@ -165,7 +175,7 @@ public sealed class MainViewModel : ObservableObject
             if (!result.Succeeded) throw new InvalidOperationException(result.StandardError.Trim());
             await ReloadStartupAsync(token);
             Status = $"Startup entry updated: {entry.Name}";
-        });
+        }, mutation: true);
     }
 
     private async Task ReloadStartupAsync(CancellationToken token)
@@ -188,14 +198,17 @@ public sealed class MainViewModel : ObservableObject
         await WithBusyAsync($"Uninstalling {app.Name}", async token =>
         {
             var result = await service.UninstallAsync(app, token);
+            if (result.ExitCode == 3) { Status = "Cancelled"; Activity.Add("Uninstaller cancelled by user."); return; }
             if (!result.Succeeded) throw new InvalidOperationException(result.StandardError.Trim());
-            Status = $"Uninstaller finished: {app.Name}";
-        });
+            Status = result.StandardOutput.Contains("restart required", StringComparison.OrdinalIgnoreCase)
+                ? "Uninstaller finished; restart required" : $"Uninstaller finished: {app.Name}";
+        }, mutation: true);
     }
 
-    private async Task WithBusyAsync(string title, Func<CancellationToken, Task> action, bool showErrors = true)
+    private async Task WithBusyAsync(string title, Func<CancellationToken, Task> action, bool showErrors = true, bool mutation = false)
     {
         if (IsBusy) return;
+        IsMutationRunning = mutation;
         IsBusy = true; OperationTitle = title; Status = "Working...";
         operationCancellation = new();
         try { await action(operationCancellation.Token); }
@@ -209,18 +222,18 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
-            operationCancellation.Dispose(); operationCancellation = null; IsBusy = false; OperationTitle = "";
-            if (Status != "Ready") ResetStatusLater(Status, ++statusRevision);
+            operationCancellation.Dispose(); operationCancellation = null; IsMutationRunning = false; IsBusy = false; OperationTitle = "";
+            UpdateBackupSummary();
+            if (Status is not ("Ready" or "Failed" or "Cancelled" or "Partial")) ResetStatusLater(Status, ++statusRevision);
         }
     }
 
-    private void RefreshLogs()
+    private async Task RefreshLogsAsync()
     {
         try
         {
             if (!File.Exists(paths.LogFile)) { LogText = "No HolmesKit log has been created yet."; RecentActivity.Clear(); RecentActivity.Add("No activity recorded yet."); return; }
-            var lines = File.ReadLines(paths.LogFile).TakeLast(500);
-            var materialized = lines.ToList();
+            var materialized = await Task.Run(() => LogTailReader.Read(paths.LogFile));
             LogText = string.Join(Environment.NewLine, materialized);
             RecentActivity.Clear();
             foreach (var line in materialized.TakeLast(4).Reverse()) RecentActivity.Add(line);
@@ -263,7 +276,7 @@ public sealed class MainViewModel : ObservableObject
         var backup = Path.Combine(paths.RootDirectory, "HolmesKit_Backups", "latest");
         var inspection = BackupInspector.Inspect(backup);
         HasBackup = inspection.IsValid;
-        BackupStatus = inspection.IsValid ? "Backup ready" : inspection.Exists ? "Backup incomplete" : "No backup yet";
+        BackupStatus = inspection.IsValid ? "Recovery baseline ready" : inspection.Summary.StartsWith("Legacy", StringComparison.Ordinal) ? "Legacy backup: manual review" : inspection.Exists ? "Recovery unavailable" : "No baseline yet";
         BackupTimestamp = inspection.Timestamp is null ? "Created before the first optimization" : $"Last changed {inspection.Timestamp:MMM d, yyyy · h:mm tt}";
         BackupDetails = inspection.Summary;
         RefreshCommandStates();

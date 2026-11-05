@@ -1,4 +1,5 @@
 param([ValidateSet('Execute','Validate')][string]$Action='Validate',[string]$Operation='')
+$Operation=$Operation.ToLowerInvariant()
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 . "$PSScriptRoot\recovery_core.ps1"

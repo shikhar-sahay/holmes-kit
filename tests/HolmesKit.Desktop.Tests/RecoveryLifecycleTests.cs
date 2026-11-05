@@ -51,7 +51,7 @@ public class RecoveryLifecycleTests
             var journal=Path.Combine(directory, "HolmesKit_Backups", "recovery", "baseline.json");
             using var envelope=System.Text.Json.JsonDocument.Parse(File.ReadAllText(journal));
             var payload=envelope.RootElement.GetProperty("Payload").GetString()!;
-            var second=await Run("power-high"); Assert.True(second.Code == 0, second.Output);
+            var second=await Run("POWER-HIGH"); Assert.True(second.Code == 0, second.Output);
             Assert.Contains("00000000-0000-0000-0000-000000000001", payload);
             Assert.Equal("LEGACY", File.ReadAllText(Path.Combine(legacy,"sentinel.reg")));
             var restore=await Run("restore-power"); Assert.True(restore.Code == 0, restore.Output);

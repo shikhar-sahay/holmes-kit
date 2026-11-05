@@ -43,14 +43,27 @@ public sealed class HolmesKitCommandService(IProcessRunner runner, IHolmesKitPat
     {
         var command = $"\"{paths.BatchFile}\" --run {operationId}";
         return new(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", ["/d", "/s", "/c", command], paths.RootDirectory,
-            $"/d /s /c \"{command}\"");
+            $"/d /s /c \"{command}\"", AllowCancellation: false);
     }
 
     private async Task<T?> RunJsonAsync<T>(string action, IReadOnlyList<string> arguments, CancellationToken token)
     {
         var result = await RunBridgeAsync(action, arguments, token);
         if (!result.Succeeded) throw new InvalidOperationException(string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput : result.StandardError);
-        try { return JsonSerializer.Deserialize<T>(result.StandardOutput.Trim(), JsonOptions); }
+        try
+        {
+            var value = JsonSerializer.Deserialize<T>(result.StandardOutput.Trim(), JsonOptions);
+            if (value is SystemSnapshot snapshot)
+            {
+                snapshot.ActiveAdapters ??= []; snapshot.Disks ??= []; snapshot.Diagnostics ??= [];
+                snapshot.WindowsVersion ??= ""; snapshot.WindowsBuild ??= ""; snapshot.Architecture ??= "";
+                snapshot.WindowsEdition ??= "Unknown"; snapshot.ComputerName ??= "Unknown"; snapshot.CpuName ??= "Unknown";
+                snapshot.PowerPlanKind ??= "Unknown"; snapshot.PowerPlanName ??= "Unknown";
+            }
+            if (value is List<InstalledApplication> apps)
+                foreach (var app in apps) { app.Name ??= "Unknown"; app.Publisher ??= ""; app.Version ??= ""; }
+            return value;
+        }
         catch (JsonException ex) { throw new InvalidDataException("HolmesKit returned malformed data.", ex); }
     }
 
@@ -63,7 +76,7 @@ public sealed class HolmesKitCommandService(IProcessRunner runner, IHolmesKitPat
             args.Add("-Data");
             args.AddRange(arguments);
         }
-        return runner.RunAsync(new("powershell.exe", args, paths.RootDirectory), cancellationToken: token);
+        return runner.RunAsync(new("powershell.exe", args, paths.RootDirectory, AllowCancellation: action is not ("startup-toggle" or "app-uninstall")), cancellationToken: token);
     }
 
     private static string Encode(string value) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));

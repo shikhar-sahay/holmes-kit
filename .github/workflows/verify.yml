@@ -1,0 +1,24 @@
+name: Windows verification
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore HolmesKit.slnx
+      - run: dotnet build HolmesKit.slnx -c Release --no-restore
+      - name: Safe tests (no native optimization execution)
+        shell: pwsh
+        run: |
+          Remove-Item Env:\HOLMESKIT_VISUAL_REVIEW_DIR -ErrorAction SilentlyContinue
+          dotnet test HolmesKit.slnx -c Release --no-build
