@@ -20,7 +20,7 @@ Both interfaces use the same HolmesKit operations. The desktop application calls
 | Applications Manager | Yes | Yes | Application-specific |
 | Session/action logs | Yes | Yes | N/A |
 
-The GUI shows scope, tradeoffs, and restart guidance before each optimization. Long-running commands run away from the UI thread, stream visible activity, support safe cancellation, and are judged by exit status rather than process launch alone.
+The GUI shows scope, tradeoffs, and restart guidance before each optimization. Long-running commands run away from the UI thread, stream visible activity, support cancellation, and are judged by exit status rather than process launch alone. Cancellation interrupts execution and may leave partial changes; it is not rollback.
 
 ## Requirements
 
@@ -40,6 +40,10 @@ The CLI remains independent of the GUI:
 3. Review the startup safety notice and every operation confirmation.
 
 Nothing in the CLI requires `HolmesKit.exe` or the .NET SDK. The Batch file also has a validated non-interactive entry point used by the desktop app: `HolmesKit.bat --run core-full`. Normal CLI use retains all interactive menus.
+
+Independently selected changes, including restore actions, startup toggles and launching uninstallers, require a fresh `Y` confirmation (`y` is accepted). Declined, blank, invalid or unavailable input does not authorize a change. The desktop supplies its own confirmation; the `--run` dispatcher is an automation boundary for an already-authorized caller and never prompts for console input.
+
+Where the existing operation requires a registry backup, backup failure stops that operation before its modifying steps. Apply All uses one confirmation and stops on a checked prerequisite or step failure. Earlier successful steps may remain applied; HolmesKit does not automatically roll them back. Cleanup may report partial failure when files are in use or inaccessible.
 
 ## Desktop application
 
@@ -84,6 +88,14 @@ dotnet build HolmesKit.slnx -c Release
 dotnet test HolmesKit.slnx -c Release --no-build
 ```
 
+Run the isolated Task 01 safety regressions with:
+
+```powershell
+dotnet test HolmesKit.slnx -c Release --filter "FullyQualifiedName~CliSafetyTests|FullyQualifiedName~GuiAuthorizationTests|FullyQualifiedName~ManagementConfirmationTests|FullyQualifiedName~RealDesktopBatchBoundary"
+```
+
+These tests execute real CMD control flow with all Windows-changing subroutines replaced by inert markers, exercise backup orchestration in temporary directories with export stubs, and test management approval fragments and the desktop process boundary with controlled fixtures. They do not run the real optimization or restore engine. Existing optional visual tests can query system data; do not enable `HOLMESKIT_VISUAL_REVIEW_DIR` for the normal safety run.
+
 Run the source-built application with:
 
 ```powershell
@@ -103,6 +115,8 @@ The app is emitted as one managed executable, while `HolmesKit.bat` and `modules
 Before optimization, HolmesKit creates its latest backup under `HolmesKit_Backups\latest`. The desktop application verifies that every expected registry key has either a valid export or an explicit absent-key record before it enables registry restoration. An unrelated or partial file is not shown as a valid backup. Activity is appended to `HolmesKit_Backups\holmeskit.log`; all local machine state is excluded from Git.
 
 The Restore page exposes the same registry, power, service, hibernation, network, and Explorer actions as the CLI. Deleted temporary files are not recoverable, closed applications must be reopened, and third-party uninstall rollback belongs to that application's installer.
+
+The latest backup is replaced by a later Batch session (including a later desktop operation); it is not a permanent original-state baseline. Registry imports merge saved values and cannot fully remove newly added values. Power recovery recreates default schemes and can remove custom plans; network/hibernation recovery also applies defaults rather than an exact prior snapshot. Task 01 repairs authorization and prerequisite gates, not these restoration limitations. A registry backup cannot recover deleted files or unsaved work from force-closed applications.
 
 ## Safety notes
 
