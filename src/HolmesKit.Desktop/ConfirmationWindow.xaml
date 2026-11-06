@@ -1,7 +1,8 @@
 <Window x:Class="HolmesKit.Desktop.ConfirmationWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="Review operation" Width="590" Height="510" MinWidth="440" MinHeight="360"
+ Title="Review operation" Style="{StaticResource {x:Type Window}}" Width="590" Height="510" MinWidth="440" MinHeight="360"
+ FocusManager.FocusedElement="{Binding ElementName=CancelAction}"
  WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="CanResizeWithGrip"
  UseLayoutRounding="True">
  <Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

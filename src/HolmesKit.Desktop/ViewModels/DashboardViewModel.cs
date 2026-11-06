@@ -14,8 +14,8 @@ public sealed class DashboardViewModel : ObservableObject
     public IReadOnlyList<MetricPoint> MemoryHistory => samples.Select(s => new MetricPoint(s.Timestamp, s.MemoryPercent)).ToArray();
     public string CpuText => PresentationFormatters.Percent(Clean(current?.CpuPercent));
     public string MemoryText => PresentationFormatters.Percent(current?.MemoryPercent);
-    public string MemoryDetail => $"{PresentationFormatters.Bytes(current?.UsedBytes)} used / {PresentationFormatters.Bytes(current?.TotalBytes)}";
-    public string AvailableText => $"{PresentationFormatters.Bytes(current?.AvailableBytes)} available";
+    public string MemoryDetail => current?.UsedBytes is null ? "Physical memory unavailable" : $"{PresentationFormatters.Bytes(current.UsedBytes)} used / {PresentationFormatters.Bytes(current.TotalBytes)}";
+    public string AvailableText => current?.AvailableBytes is null ? "Unavailable" : $"{PresentationFormatters.Bytes(current.AvailableBytes)} available";
     public string UptimeText => PresentationFormatters.Uptime(current?.UptimeSeconds);
     public string SamplingText => IsMonitoring
         ? current is null ? "Waiting for first sample…" : $"Live · 2 s interval · {current.Timestamp.ToLocalTime():T}"

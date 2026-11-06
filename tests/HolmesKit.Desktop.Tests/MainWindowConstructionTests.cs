@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using HolmesKit.Desktop.ViewModels;
 using HolmesKit.Desktop.Models;
 using HolmesKit.Desktop.Services;
+using HolmesKit.Desktop.Acceptance;
 
 namespace HolmesKit.Desktop.Tests;
 
@@ -49,11 +50,14 @@ public class MainWindowConstructionTests
                 fixture.RefreshSystemCommand.Execute(null);
                 var outputDirectory = Environment.GetEnvironmentVariable("HOLMESKIT_VISUAL_REVIEW_DIR");
                 // Ordinary construction must never depend on native scans or modal query errors.
+                var review = new MainViewModel(new AcceptanceService(new HolmesKitCommandService(new ProcessRunner(), new HolmesKitPathResolver())), new ConstructionPaths());
                 var window = string.IsNullOrWhiteSpace(outputDirectory)
                     ? new MainWindow(fixture) { Width = 1120, Height = 760 }
-                    : new MainWindow { Width = 1120, Height = 760 };
+                    : new MainWindow(review) { Width = 1120, Height = 760, Title = "HolmesKit — inert rendered acceptance" };
                 fixture.Notify = (_, message, _) => throw new InvalidOperationException(message);
                 var pages = Assert.IsType<TabControl>(window.FindName("ShellTabs"));
+                Assert.Equal(13, window.FontSize);
+                Assert.Equal(Color.FromRgb(10, 10, 10), Assert.IsType<SolidColorBrush>(window.Background).Color);
                 Assert.Equal(10, pages.Items.Count);
                 if (!string.IsNullOrWhiteSpace(outputDirectory))
                 {
@@ -78,6 +82,10 @@ public class MainWindowConstructionTests
                         window.UpdateLayout();
                         var header = ((TabItem)pages.Items[index]).Header?.ToString() ?? $"page-{index}";
                         var safeName = string.Join("-", header.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Replace(' ', '-').ToLowerInvariant();
+                        var selected = (TabItem)pages.Items[index];
+                        var title = FindVisual<TextBlock>((DependencyObject)selected.Content, block => ReferenceEquals(block.Style, window.FindResource("PageTitleStyle")));
+                        if (title is not null)
+                            File.AppendAllText(Path.Combine(outputDirectory, "layout-private.txt"), $"{index}: titleY={title.TranslatePoint(new Point(), (UIElement)window.Content).Y}; rootMargin={((FrameworkElement)selected.Content).Margin}\n");
                         SaveScreenshot(window, Path.Combine(outputDirectory, $"{index:00}-{safeName}.png"));
                     }
                     window.Width = 900;
@@ -118,7 +126,18 @@ public class MainWindowConstructionTests
                         stage = $"page {index}, 1120x760 dispatcher";
                         PumpDispatcher();
                         Assert.Null(dispatcherFailure);
+                        ArrangeSurface(window, new Size(1120, 760));
                         Assert.True(((TabItem)pages.Items[index]).IsSelected);
+                        if (index == 9)
+                        {
+                            var clear = FindVisual<Button>((DependencyObject)((TabItem)pages.Items[index]).Content, button => Equals(button.Content, "Clear view"));
+                            Assert.NotNull(clear);
+                            Assert.False(Assert.IsType<DockPanel>(clear.Parent).LastChildFill);
+                            Assert.InRange(clear.ActualWidth, 1, 120);
+                            model.Activity.Add("Inert session output");
+                            clear.Command.Execute(null);
+                            Assert.Empty(model.Activity);
+                        }
                     }
                     foreach (var size in new[] { new Size(900, 620), new Size(1600, 900) })
                     {
@@ -131,6 +150,7 @@ public class MainWindowConstructionTests
                             stage = $"page {index}, {size} dispatcher";
                             PumpDispatcher();
                             Assert.Null(dispatcherFailure);
+                            ArrangeSurface(window, size);
                         }
                     }
                     Assert.False(model.IsBusy);
@@ -141,9 +161,15 @@ public class MainWindowConstructionTests
                 confirmation.Measure(new Size(590, 510));
                 confirmation.Arrange(new Rect(0, 0, 590, 510));
                 confirmation.UpdateLayout();
+                Assert.Equal(13, confirmation.FontSize);
+                Assert.Equal(Color.FromRgb(10, 10, 10), Assert.IsType<SolidColorBrush>(confirmation.Background).Color);
                 var cancel = Assert.IsType<Button>(confirmation.FindName("CancelAction"));
                 Assert.True(cancel.IsCancel);
                 Assert.True(cancel.IsDefault);
+                Assert.False(confirmation.ShowInTaskbar);
+                var details = Assert.IsType<TextBox>(confirmation.FindName("Details"));
+                Assert.True(details.IsReadOnly);
+                Assert.Equal(ScrollBarVisibility.Auto, details.VerticalScrollBarVisibility);
                 if (!string.IsNullOrWhiteSpace(outputDirectory)) SaveScreenshot(confirmation, Path.Combine(outputDirectory, "confirmation.png"));
                 confirmation.Close();
                 Assert.Null(dispatcherFailure);
@@ -174,6 +200,24 @@ public class MainWindowConstructionTests
         public List<string> Errors { get; } = [];
         public override void Write(string? message) { if (!string.IsNullOrWhiteSpace(message)) Errors.Add(message); }
         public override void WriteLine(string? message) => Write(message);
+    }
+
+    private static T? FindVisual<T>(DependencyObject root, Predicate<T> predicate) where T : DependencyObject
+    {
+        if (root is T item && predicate(item)) return item;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            if (FindVisual(VisualTreeHelper.GetChild(root, i), predicate) is { } found) return found;
+        return null;
+    }
+
+    private static void ArrangeSurface(Window window, Size size)
+    {
+        // An unshown Window has no HWND and can leave its content at zero size.
+        // Measure the actual root explicitly so child-size assertions exercise real layout.
+        var surface = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+        surface.Measure(size);
+        surface.Arrange(new Rect(size));
+        surface.UpdateLayout();
     }
 
     private sealed class ConstructionPaths : IHolmesKitPathResolver

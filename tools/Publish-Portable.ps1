@@ -12,7 +12,7 @@ $null=New-Item -ItemType Directory -Path $packages -Force
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $root 'docs\WINDOWS_VM_VERIFICATION.md') -Destination $stage
-$documents=@('docs/feature-parity.md','docs/WINDOWS_VM_VERIFICATION.md','docs/HANDBOOK.md','docs/RELEASE_READINESS.md','docs/screenshots/desktop-core.png')
+$documents=@('docs/feature-parity.md','docs/WINDOWS_VM_VERIFICATION.md','docs/HANDBOOK.md','docs/RELEASE_READINESS.md','docs/screenshots/desktop-core.png','docs/screenshots/desktop-core-task05.png')
 foreach($document in $documents){
     $destination=Join-Path $stage $document
     $null=New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force

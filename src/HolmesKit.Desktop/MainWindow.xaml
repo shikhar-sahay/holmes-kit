@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:HolmesKit.Desktop.Controls"
         xmlns:models="clr-namespace:HolmesKit.Desktop.Models"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-        Title="HolmesKit" Width="1120" Height="760" MinWidth="900" MinHeight="620"
+        Title="HolmesKit" Style="{StaticResource {x:Type Window}}" Width="1120" Height="760" MinWidth="900" MinHeight="620"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="BoolVisibility" />
@@ -88,7 +88,7 @@
           <Grid Margin="30,24,30,28" MaxWidth="1080" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Border Style="{StaticResource PanelStyle}" Padding="22,18" Background="{DynamicResource SurfaceBrush}">
-              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="240" /></Grid.ColumnDefinitions>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
                 <StackPanel>
                   <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" MaxHeight="60"><TextBlock FontFamily="Cascadia Mono, Consolas" FontSize="7.4" LineHeight="9" Foreground="{DynamicResource AccentStrongBrush}" TextWrapping="NoWrap" xml:space="preserve">██╗  ██╗ ██████╗ ██╗     ███╗   ███╗███████╗███████╗██╗  ██╗██╗████████╗
 ██║  ██║██╔═══██╗██║     ████╗ ████║██╔════╝██╔════╝██║ ██╔╝██║╚══██╔══╝
@@ -103,7 +103,7 @@
                   <StackPanel>
                     <TextBlock Text="System" Style="{StaticResource SectionLabelStyle}" />
                     <TextBlock Text="{Binding System.ComputerName}" FontSize="17" FontWeight="SemiBold" Margin="0,8,0,0" />
-                    <TextBlock Text="{Binding System.WindowsDisplay}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,12" />
+                    <TextBlock Text="{Binding System.WindowsEdition}" ToolTip="{Binding System.WindowsDisplay}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,10" />
                     <TextBlock Text="Power plan" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" />
                     <TextBlock Text="{Binding System.PowerPlanDisplay}" FontWeight="SemiBold" Margin="0,5,0,0" />
                     <TextBlock Text="{Binding System.PowerPlanDetails}" Style="{StaticResource MetadataStyle}" Margin="0,3,0,0" />
@@ -212,7 +212,7 @@
       <TabItem Header="Activity &amp; Logs" Tag="&#xE9D5;">
         <Grid Margin="{StaticResource PageInset}"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="170" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Activity &amp; Logs" Style="{StaticResource PageTitleStyle}" /><TextBlock Text="Operation output and saved audit entries." Style="{StaticResource PageSubtitleStyle}" /></StackPanel><Button Grid.Column="1" Content="Cancel query" Style="{StaticResource DangerButtonStyle}" Command="{Binding CancelCommand}" VerticalAlignment="Center" /></Grid>
-          <Border Grid.Row="1" Style="{StaticResource PanelStyle}" Margin="0,20,0,0"><Grid><Grid.RowDefinitions><RowDefinition Height="34" /><RowDefinition Height="*" /></Grid.RowDefinitions><Border Background="{DynamicResource SurfaceRaisedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="11,8"><DockPanel><TextBlock Text="Current session" Foreground="{DynamicResource TextTertiaryBrush}" /><Button DockPanel.Dock="Right" Content="Clear view" Style="{StaticResource QuietButtonStyle}" Padding="7,2" MinHeight="21" FontSize="10" Command="{Binding ClearActivityCommand}" /></DockPanel></Border><ListBox x:Name="ActivityList" Grid.Row="1" ItemsSource="{Binding Activity}" Background="Transparent" BorderThickness="0" FontFamily="Cascadia Mono, Consolas" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Padding="9,6" /></Grid></Border>
+          <Border Grid.Row="1" Style="{StaticResource PanelStyle}" Margin="0,20,0,0"><Grid><Grid.RowDefinitions><RowDefinition Height="34" /><RowDefinition Height="*" /></Grid.RowDefinitions><Border Background="{DynamicResource SurfaceRaisedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="11,8"><DockPanel LastChildFill="False"><TextBlock Text="Current session" Foreground="{DynamicResource TextTertiaryBrush}" /><Button DockPanel.Dock="Right" Content="Clear view" Style="{StaticResource QuietButtonStyle}" Padding="7,2" MinHeight="21" FontSize="10" Command="{Binding ClearActivityCommand}" /></DockPanel></Border><ListBox x:Name="ActivityList" Grid.Row="1" ItemsSource="{Binding Activity}" Background="Transparent" BorderThickness="0" FontFamily="Cascadia Mono, Consolas" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Padding="9,6" /></Grid></Border>
           <DockPanel Grid.Row="2" Margin="0,16,0,8"><StackPanel Orientation="Horizontal" DockPanel.Dock="Right"><Button Content="Copy" Style="{StaticResource QuietButtonStyle}" Command="{Binding CopyLogsCommand}" Margin="0,0,7,0" /><Button Content="Reload" Style="{StaticResource QuietButtonStyle}" Command="{Binding RefreshLogsCommand}" Margin="0,0,7,0" /><Button Content="Open folder" Command="{Binding OpenLogFolderCommand}" /></StackPanel><StackPanel><TextBlock Text="Audit log" Foreground="{DynamicResource TextTertiaryBrush}" /><TextBlock Text="Latest 500 lines · source file is never cleared here" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,4,0,0" /></StackPanel></DockPanel>
           <TextBox Grid.Row="3" AutomationProperties.Name="Audit log diagnostic output" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Cascadia Mono, Consolas" FontSize="11" Background="{DynamicResource ConsoleBrush}" Foreground="{DynamicResource TextSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" Padding="12" />
         </Grid>

@@ -60,6 +60,8 @@ public class DashboardTests
             Assert.Null(sample.UsedBytes); Assert.Null(sample.MemoryPercent);
         }
         Assert.Equal("Unavailable", new DashboardViewModel().CpuText);
+        Assert.Equal("Physical memory unavailable", new DashboardViewModel().MemoryDetail);
+        Assert.Equal("Unavailable", new DashboardViewModel().AvailableText);
     }
 
     [Fact]
