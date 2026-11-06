@@ -3,10 +3,10 @@ using System.IO;
 
 namespace HolmesKit.Desktop.Services;
 
-public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, string? RawArguments = null, bool AllowCancellation = true);
-public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError, bool WasCancelled = false)
+public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Arguments, string WorkingDirectory, string? RawArguments = null, bool AllowCancellation = true, TimeSpan? Timeout = null);
+public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError, bool WasCancelled = false, bool TimedOut = false)
 {
-    public bool Succeeded => ExitCode == 0 && !WasCancelled;
+    public bool Succeeded => ExitCode == 0 && !WasCancelled && !TimedOut;
 }
 
 public interface IProcessRunner
@@ -19,6 +19,11 @@ public sealed class ProcessRunner : IProcessRunner
     public async Task<ProcessResult> RunAsync(ProcessRequest request, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         if (!request.AllowCancellation) cancellationToken = CancellationToken.None;
+        var callerToken = cancellationToken;
+        using var timeout = request.AllowCancellation && request.Timeout is { } duration ? new CancellationTokenSource(duration) : null;
+        using var linked = timeout is not null ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token) : null;
+        if (linked is not null) cancellationToken = linked.Token;
+        if (cancellationToken.IsCancellationRequested) return new(-1, "", "", WasCancelled: true);
         var startInfo = new ProcessStartInfo
         {
             FileName = request.FileName,
@@ -59,7 +64,8 @@ public sealed class ProcessRunner : IProcessRunner
         {
             try { if (!process.HasExited) process.Kill(true); } catch { }
             try { await Task.WhenAll(outputTask, errorTask); } catch (OperationCanceledException) { }
-            return new(-1, output.ToString(), errors.ToString(), true);
+            var timedOut = timeout?.IsCancellationRequested == true && !callerToken.IsCancellationRequested;
+            return new(-1, output.ToString(), errors.ToString(), WasCancelled: !timedOut, TimedOut: timedOut);
         }
     }
 

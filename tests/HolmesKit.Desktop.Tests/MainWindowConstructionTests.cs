@@ -155,6 +155,29 @@ public class MainWindowConstructionTests
                     }
                     Assert.False(model.IsBusy);
                     Assert.Equal(0, fixtureService.Mutations);
+                    stage = "deferred management-page loading";
+                    // Actual Loaded/selection/busy events; all service methods remain inert.
+                    fixtureService.SystemGate = new();
+                    pages.SelectedIndex = 0;
+                    window.Left = -10000; window.Top = -10000; window.ShowInTaskbar = false;
+                    window.Show();
+                    PumpDispatcher();
+                    Assert.True(model.IsBusy);
+                    pages.SelectedIndex = 5;
+                    Assert.Equal(0, fixtureService.StartupReads);
+                    fixtureService.SystemGate.SetResult(new SystemSnapshot());
+                    WaitForIdle(window, TimeSpan.FromSeconds(5));
+                    PumpDispatcher();
+                    Assert.Equal(1, fixtureService.StartupReads);
+                    fixtureService.SystemGate = new();
+                    model.RefreshSystemCommand.Execute(null);
+                    pages.SelectedIndex = 6;
+                    Assert.Equal(0, fixtureService.ApplicationReads);
+                    fixtureService.SystemGate.SetResult(new SystemSnapshot());
+                    WaitForIdle(window, TimeSpan.FromSeconds(5));
+                    PumpDispatcher();
+                    Assert.Equal(1, fixtureService.ApplicationReads);
+                    Assert.Equal(0, fixtureService.Mutations);
                 }
                 stage = "confirmation construction";
                 var confirmation = new ConfirmationWindow("Review test operation", "Scope\nRecovery limitations\nNo system operation is invoked by this test.");
@@ -231,14 +254,16 @@ public class MainWindowConstructionTests
     private sealed class ConstructionService : IHolmesKitCommandService
     {
         public int Mutations;
+        public int StartupReads, ApplicationReads;
+        public TaskCompletionSource<SystemSnapshot>? SystemGate;
         private Task<ProcessResult> RejectMutation() { Mutations++; throw new InvalidOperationException("No mutations permitted."); }
         public Task<ProcessResult> RunOperationAsync(string id, IProgress<string>? progress, CancellationToken token) => RejectMutation();
         public Task<ProcessResult> ToggleStartupAsync(StartupEntry entry, CancellationToken token) => RejectMutation();
         public Task<ProcessResult> UninstallAsync(InstalledApplication app, CancellationToken token) => RejectMutation();
-        public Task<SystemSnapshot> GetSystemInfoAsync(CancellationToken token) => Task.FromResult(new SystemSnapshot { ComputerName = "Construction fixture", CpuName = "Fixture processor",
+        public Task<SystemSnapshot> GetSystemInfoAsync(CancellationToken token) => SystemGate?.Task ?? Task.FromResult(new SystemSnapshot { ComputerName = "Construction fixture", CpuName = "Fixture processor",
             Disks = [new() { Name = "C:", UsedBytes = 750, FreeBytes = 250, TotalBytes = 1000, Percent = 75 }] });
-        public Task<IReadOnlyList<StartupEntry>> GetStartupEntriesAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<StartupEntry>>([]);
-        public Task<IReadOnlyList<InstalledApplication>> GetApplicationsAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<InstalledApplication>>([]);
+        public Task<IReadOnlyList<StartupEntry>> GetStartupEntriesAsync(CancellationToken token) { StartupReads++; return Task.FromResult<IReadOnlyList<StartupEntry>>([]); }
+        public Task<IReadOnlyList<InstalledApplication>> GetApplicationsAsync(CancellationToken token) { ApplicationReads++; return Task.FromResult<IReadOnlyList<InstalledApplication>>([]); }
     }
 
     [Fact]

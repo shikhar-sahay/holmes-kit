@@ -60,20 +60,13 @@ while ($running) {
             Write-Host "  Launching uninstaller for: $($app.DisplayName)" -ForegroundColor Yellow
             Write-Host "  The uninstaller may open a separate window." -ForegroundColor DarkGray
             try {
-                $u = $app.UninstallString
-                if ($u -match "MsiExec") {
-                    $guid = [regex]::Match($u, "\{[^}]+\}").Value
-                    if ($guid) { Start-Process "msiexec.exe" -ArgumentList "/x $guid /qb" -Wait }
-                    else { Start-Process "msiexec.exe" -ArgumentList $u.Replace("MsiExec.exe ","") -Wait }
-                } else {
-                    # Parse quoted vs unquoted uninstall strings safely
-                    if ($u -match '^"([^"]+)"(.*)$') {
-                        Start-Process $Matches[1] -ArgumentList $Matches[2].Trim() -Wait
-                    } else {
-                        $parts = $u -split " ",2
-                        Start-Process $parts[0] -ArgumentList (if ($parts[1]) { $parts[1] } else { "" }) -Wait
-                    }
-                }
+                # Share identity revalidation, conservative executable parsing and exit handling
+                # with Desktop; this remains a standalone PowerShell CLI with no .NET GUI dependency.
+                $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$app.UninstallString))
+                $encodedName = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$app.DisplayName))
+                & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'gui_bridge.ps1') -Action app-uninstall -Data $encodedCommand -NameData $encodedName
+                if ($LASTEXITCODE -eq 3) { Write-Host '  Uninstaller cancelled.' -ForegroundColor Yellow }
+                elseif ($LASTEXITCODE -ne 0) { throw "Uninstaller did not complete (exit $LASTEXITCODE). Review the diagnostic above." }
             } catch {
                 Write-Host "  Could not launch uninstaller: $_" -ForegroundColor Red
             }

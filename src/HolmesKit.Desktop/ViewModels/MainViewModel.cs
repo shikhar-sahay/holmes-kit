@@ -173,7 +173,7 @@ public sealed class MainViewModel : ObservableObject
         await WithBusyAsync($"Updating {entry.Name}", async token =>
         {
             var result = await service.ToggleStartupAsync(entry, token);
-            if (!result.Succeeded) throw new InvalidOperationException(result.StandardError.Trim());
+            RecordManagementResult(result);
             await ReloadStartupAsync(token);
             Status = $"Startup entry updated: {entry.Name}";
         }, mutation: true);
@@ -200,7 +200,7 @@ public sealed class MainViewModel : ObservableObject
         {
             var result = await service.UninstallAsync(app, token);
             if (result.ExitCode == 3) { Status = "Cancelled"; Activity.Add("Uninstaller cancelled by user."); return; }
-            if (!result.Succeeded) throw new InvalidOperationException(result.StandardError.Trim());
+            RecordManagementResult(result);
             Status = result.StandardOutput.Contains("restart required", StringComparison.OrdinalIgnoreCase)
                 ? "Uninstaller finished; restart required" : $"Uninstaller finished: {app.Name}";
         }, mutation: true);
@@ -229,6 +229,19 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private void RecordManagementResult(ProcessResult result)
+    {
+        if (!string.IsNullOrWhiteSpace(result.StandardOutput)) Activity.Add(result.StandardOutput.Trim());
+        if (!string.IsNullOrWhiteSpace(result.StandardError)) Activity.Add(result.StandardError.Trim());
+        if (!result.Succeeded)
+        {
+            var detail = string.Join(Environment.NewLine, new[] { result.StandardOutput, result.StandardError }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(detail)
+                ? $"The command failed (exit code {result.ExitCode}) without diagnostic output. Refresh before retrying."
+                : detail.Trim());
+        }
+    }
+
     private async Task RefreshLogsAsync()
     {
         try
@@ -244,9 +257,18 @@ public sealed class MainViewModel : ObservableObject
 
     private void OpenLogFolder()
     {
-        var folder = Path.GetDirectoryName(paths.LogFile)!;
-        Directory.CreateDirectory(folder);
-        Process.Start(new ProcessStartInfo("explorer.exe", folder) { UseShellExecute = true });
+        try
+        {
+            var folder = Path.GetDirectoryName(paths.LogFile)!;
+            Directory.CreateDirectory(folder);
+            Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = true, ArgumentList = { folder } });
+        }
+        catch (Exception ex)
+        {
+            Status = "Failed";
+            Activity.Add($"Unable to open the log folder: {ex.Message}");
+            Notify?.Invoke("Unable to open the log folder", ex.Message, MessageBoxImage.Error);
+        }
     }
 
     private void CopyLogs()

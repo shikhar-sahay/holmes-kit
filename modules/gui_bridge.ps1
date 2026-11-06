@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][ValidateSet('system-info','startup-list','startup-toggle','apps-list','app-uninstall')][string]$Action,
-    [string[]]$Data = @()
+    [string[]]$Data = @(),
+    [string]$NameData = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +28,27 @@ function ConvertFrom-HolmesData([string]$Value) {
 function Assert-HolmesUninstallerPath([string]$Path) {
     if (-not [IO.Path]::IsPathRooted($Path) -or [IO.Path]::GetExtension($Path) -ine '.exe' -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw 'Uninstaller must be an existing absolute executable path.' }
     if ([IO.Path]::GetFileName($Path) -in @('cmd.exe','powershell.exe','pwsh.exe','wscript.exe','cscript.exe','mshta.exe','rundll32.exe','regsvr32.exe')) { throw 'Interpreter-based uninstall commands require manual review in Windows Settings.' }
+}
+
+function Start-HolmesUninstaller([string]$Path, [string]$Arguments) {
+    Assert-HolmesUninstallerPath $Path
+    $parameters = @{ FilePath=$Path; Wait=$true; PassThru=$true }
+    # Start-Process rejects an empty ArgumentList. Argument-free registrations are valid.
+    if (-not [string]::IsNullOrWhiteSpace($Arguments)) { $parameters.ArgumentList=$Arguments }
+    return Start-Process @parameters
+}
+
+function Resolve-HolmesStartup($Requested, $Entries) {
+    $matches = @($Entries | Where-Object {
+        $_.Type -eq $Requested.Type -and $_.Hive -eq $Requested.Hive -and $_.RegPath -eq $Requested.RegPath -and $_.Name -ceq $Requested.Name
+    })
+    if ($matches.Count -ne 1) { throw 'Startup identity is stale or ambiguous; refresh the list.' }
+    $current = $matches[0]
+    if ($current.Locked) { throw 'This startup entry is protected and cannot be changed.' }
+    if ($Requested.Status -notin @('Enabled','Disabled') -or $current.Status -cne $Requested.Status) {
+        throw 'Startup state changed since review; refresh and confirm again. No change was made.'
+    }
+    return $current
 }
 
 $protectedPaths = @(
@@ -182,12 +204,7 @@ try {
             if ($Data.Count -lt 1) { throw 'Startup entry data is missing.' }
             $entry = (ConvertFrom-HolmesData $Data[0]) | ConvertFrom-Json
             # Resolve an identity against current enumeration, never trust caller-supplied paths/locks.
-            $matches = @(@(Get-RegistryStartups) + @(Get-SchedulerStartups) | Where-Object {
-                $_.Type -eq $entry.Type -and $_.Hive -eq $entry.Hive -and $_.RegPath -eq $entry.RegPath -and $_.Name -ceq $entry.Name
-            })
-            if ($matches.Count -ne 1) { throw 'Startup identity is stale or ambiguous; refresh the list.' }
-            $entry = $matches[0]
-            if ($entry.Locked) { throw 'This startup entry is protected and cannot be changed.' }
+            $entry = Resolve-HolmesStartup $entry (@(Get-RegistryStartups) + @(Get-SchedulerStartups))
             if ($entry.Type -eq 'Registry') {
                 if (-not (Test-Path $entry.ApprovedPath)) { New-Item -Path $entry.ApprovedPath -Force | Out-Null }
                 $bytes = if ($entry.Status -eq 'Enabled') { [byte[]](@(3) + (@(0) * 15)) } else { [byte[]](@(2) + (@(0) * 15)) }
@@ -210,7 +227,7 @@ try {
             $apps = foreach ($path in $paths) {
                 Get-ItemProperty $path -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -and $_.UninstallString }
             }
-            $result = $apps | Sort-Object DisplayName, DisplayVersion | Group-Object { "$($_.DisplayName)|$($_.DisplayVersion)|$($_.Publisher)|$($_.UninstallString)" } | ForEach-Object {
+            $result = @($apps | Sort-Object DisplayName, DisplayVersion | Group-Object { "$($_.DisplayName)|$($_.DisplayVersion)|$($_.Publisher)|$($_.UninstallString)" } | ForEach-Object {
                 $app = $_.Group[0]
                 $uninstall = [string]$app.UninstallString
                 [pscustomobject]@{
@@ -219,13 +236,15 @@ try {
                     InstallerType=if ($uninstall -match '(?i)MsiExec') { 'MSI' } else { 'Application' }
                     UninstallData=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($uninstall))
                 }
-            }
+            })
             ConvertTo-Json -InputObject @($result) -Compress -Depth 4
         }
         'app-uninstall' {
-            if ($Data.Count -lt 2) { throw 'Application uninstall data is missing.' }
+            if ($Data.Count -lt 1 -or ([string]::IsNullOrEmpty($NameData) -and $Data.Count -lt 2)) { throw 'Application uninstall data is missing.' }
             $uninstall = ConvertFrom-HolmesData $Data[0]
-            $name = ConvertFrom-HolmesData $Data[1]
+            # Native powershell.exe -File does not bind multiple CLI values to an array.
+            # Keep direct PowerShell array callers compatible, but use a named scalar across processes.
+            $name = ConvertFrom-HolmesData $(if ($NameData) { $NameData } else { $Data[1] })
             $registered = @(@('HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*') | ForEach-Object {
                 Get-ItemProperty $_ -ErrorAction SilentlyContinue
             } | Where-Object { $_.DisplayName -ceq $name -and $_.UninstallString -ceq $uninstall })
@@ -237,13 +256,11 @@ try {
                 else { throw 'MSI registration has no valid product GUID. Use Windows Settings.' }
             } elseif ($uninstall -match '^"([^"]+)"(.*)$') {
                 $exe = $Matches[1]; $arguments = $Matches[2].Trim()
-                Assert-HolmesUninstallerPath $exe
-                $process = Start-Process $exe -ArgumentList $arguments -Wait -PassThru
+                $process = Start-HolmesUninstaller $exe $arguments
             } else {
                 if ($uninstall -notmatch '^(\S+\.exe)(?:\s+(.*))?$') { throw 'Ambiguous unquoted uninstall command. Use Windows Settings to uninstall this application.' }
                 $exe = $Matches[1]; $arguments = $Matches[2]
-                Assert-HolmesUninstallerPath $exe
-                $process = Start-Process $exe -ArgumentList $arguments -Wait -PassThru
+                $process = Start-HolmesUninstaller $exe $arguments
             }
             if ($process.ExitCode -eq 1602) { Write-Output 'Uninstaller cancelled by user.'; exit 3 }
             if ($process.ExitCode -eq 3010) { Write-Output 'Uninstaller finished; Windows restart required.'; exit 0 }

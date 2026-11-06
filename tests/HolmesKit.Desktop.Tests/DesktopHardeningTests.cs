@@ -5,6 +5,34 @@ namespace HolmesKit.Desktop.Tests;
 public class DesktopHardeningTests
 {
     [Fact]
+    public async Task ReadOnlyTimeout_TerminatesOnlyAnInertSleepingChild()
+    {
+        var result = await new ProcessRunner().RunAsync(new("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 60"],
+            Environment.CurrentDirectory, Timeout: TimeSpan.FromMilliseconds(150)), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(result.TimedOut);
+        Assert.False(result.WasCancelled);
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task CancelledRead_DoesNotAttemptToStartEvenAMissingExecutable()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var result = await new ProcessRunner().RunAsync(new("missing-holmeskit-fixture.exe", [], Environment.CurrentDirectory), cancellationToken: cancellation.Token);
+        Assert.True(result.WasCancelled);
+        Assert.Empty(result.StandardError);
+    }
+
+    [Fact]
+    public async Task MissingExecutable_ReturnsDiagnosticFailure()
+    {
+        var result = await new ProcessRunner().RunAsync(new("missing-holmeskit-fixture.exe", [], Environment.CurrentDirectory), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.False(result.Succeeded);
+        Assert.NotEmpty(result.StandardError);
+    }
+
+    [Fact]
     public void TailReader_BoundsLargeLogsAndReturnsNewestLines()
     {
         var path=Path.Combine(Path.GetTempPath(),Guid.NewGuid()+".log");

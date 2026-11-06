@@ -143,48 +143,19 @@ function Show-Entries($entries) {
 }
 
 function Toggle-RegistryEntry($entry) {
-    if ($entry.Locked) {
-        Write-Host "  This entry is protected and cannot be toggled." -ForegroundColor DarkGray
-        Write-Host "  You can remove it manually via Task Manager > Startup." -ForegroundColor DarkGray
-        return
-    }
-    $approvedPath = $entry.ApprovedPath
     try {
-        if (-not (Test-Path $approvedPath)) {
-            New-Item -Path $approvedPath -Force | Out-Null
-        }
-        $bytes = if ($entry.Status -eq "Enabled") { [byte[]](@(3) + (@(0) * 15)) } else { [byte[]](@(2) + (@(0) * 15)) }
-        Set-ItemProperty -Path $approvedPath -Name $entry.Name -Value $bytes -Type Binary -ErrorAction Stop
-        $msg = if ($entry.Status -eq "Enabled") { "Disabled" } else { "Enabled" }
-        $col = if ($entry.Status -eq "Enabled") { "Yellow" } else { "Green" }
-        Write-Host "  $msg`: $($entry.Name)" -ForegroundColor $col
+        if ($entry.Locked) { throw 'This entry is protected.' }
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($entry | ConvertTo-Json -Compress)))
+        & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'gui_bridge.ps1') -Action startup-toggle -Data $encoded
+        if ($LASTEXITCODE -ne 0) { throw "Startup change failed (exit $LASTEXITCODE). Refresh and review the diagnostic above." }
     } catch {
-        Write-Host "  Could not toggle $($entry.Name)." -ForegroundColor Red
-        Write-Host "  Try disabling it via Task Manager > Startup tab instead." -ForegroundColor DarkGray
+        Write-Host "  $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
 function Toggle-SchedulerEntry($entry) {
-    if ($entry.Locked) {
-        Write-Host "  This task is protected by Windows and cannot be toggled here." -ForegroundColor DarkGray
-        Write-Host "  Path: $($entry.Hive)" -ForegroundColor DarkGray
-        return
-    }
-    try {
-        $taskPath = $entry.Hive
-        if (-not $taskPath.EndsWith("\")) { $taskPath = $taskPath + "\" }
-        if ($entry.Status -eq "Enabled") {
-            Disable-ScheduledTask -TaskName $entry.Name -TaskPath $taskPath -ErrorAction Stop | Out-Null
-            Write-Host "  Disabled: $($entry.Name)" -ForegroundColor Yellow
-        } else {
-            Enable-ScheduledTask -TaskName $entry.Name -TaskPath $taskPath -ErrorAction Stop | Out-Null
-            Write-Host "  Enabled: $($entry.Name)" -ForegroundColor Green
-        }
-    } catch {
-        Write-Host "  Could not toggle: $($entry.Name)" -ForegroundColor Red
-        Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray
-        Write-Host "  You can manage this via Task Scheduler (taskschd.msc)." -ForegroundColor DarkGray
-    }
+    # The bridge re-enumerates identity, protection and state for both entry types.
+    Toggle-RegistryEntry $entry
 }
 
 $running = $true

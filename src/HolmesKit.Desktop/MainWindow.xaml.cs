@@ -26,10 +26,17 @@ public partial class MainWindow : Window
         {
             if (viewModel.Activity.Count > 0) ActivityList.ScrollIntoView(viewModel.Activity[^1]);
         });
-        Loaded += async (_, _) => { await viewModel.InitializeAsync(); UpdateMonitoring(); };
+        Loaded += async (_, _) => { await viewModel.InitializeAsync(); UpdateMonitoring(); LoadSelectedPage(); };
         StateChanged += (_, _) => UpdateMonitoring();
         IsVisibleChanged += (_, _) => UpdateMonitoring();
-        viewModel.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainViewModel.IsBusy)) UpdateMonitoring(); };
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(MainViewModel.IsBusy)) return;
+            UpdateMonitoring();
+            // A page selected during another query must load when that query finishes.
+            // Queue after AsyncRelayCommand releases its own running flag.
+            if (!viewModel.IsBusy) Dispatcher.BeginInvoke(LoadSelectedPage);
+        };
         Closed += (_, _) => { closed = true; StopMonitoring(); };
         Closing += (_, e) =>
         {
@@ -46,6 +53,12 @@ public partial class MainWindow : Window
     {
         if (!IsLoaded || e.Source != ShellTabs) return;
         UpdateMonitoring();
+        LoadSelectedPage();
+    }
+
+    private void LoadSelectedPage()
+    {
+        if (!IsLoaded || closed || viewModel.IsBusy) return;
         if (ShellTabs.SelectedIndex == 5 && !startupLoaded)
         {
             if (!viewModel.RefreshStartupCommand.CanExecute(null)) return;

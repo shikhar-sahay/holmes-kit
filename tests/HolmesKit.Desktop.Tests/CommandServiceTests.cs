@@ -6,6 +6,26 @@ namespace HolmesKit.Desktop.Tests;
 public class CommandServiceTests
 {
     [Fact]
+    public async Task ActualPowerShellFileBinding_PreservesBothUninstallIdentityValues()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "HolmesKit transport " + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "modules"));
+        try
+        {
+            var source = File.ReadAllText(new HolmesKitPathResolver(AppContext.BaseDirectory).BridgeScript);
+            // Only the real parameter block, never any engine/bridge action body.
+            var parameters = source[..source.IndexOf("$ErrorActionPreference", StringComparison.Ordinal)];
+            File.WriteAllText(Path.Combine(root, "modules", "gui_bridge.ps1"), parameters + "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); ConvertTo-Json -InputObject @{Data=$Data;NameData=$NameData} -Compress");
+            var app = new HolmesKit.Desktop.Models.InstalledApplication { Name = "Example Ω & quoted \"name\"", UninstallData = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("C:\\Fixture with spaces\\uninstall.exe")) };
+            var result = await new HolmesKitCommandService(new ProcessRunner(), new FakePaths(root)).UninstallAsync(app, TestContext.Current.CancellationToken);
+            Assert.True(result.Succeeded, result.StandardError);
+            using var json = System.Text.Json.JsonDocument.Parse(result.StandardOutput);
+            Assert.Equal(app.UninstallData, json.RootElement.GetProperty("Data")[0].GetString());
+            Assert.Equal(app.Name, System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(json.RootElement.GetProperty("NameData").GetString()!)));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+    [Fact]
     public async Task RealDesktopBatchBoundary_PropagatesPrerequisiteFailureWithoutInput()
     {
         var directory = Path.Combine(Path.GetTempPath(), "HolmesKit Boundary " + Guid.NewGuid().ToString("N"));
@@ -66,6 +86,14 @@ public class CommandServiceTests
         var service = new HolmesKitCommandService(runner, new FakePaths(@"C:\Holmes Kit"));
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetApplicationsAsync(TestContext.Current.CancellationToken));
         Assert.Contains("Access denied", error.Message);
+    }
+
+    [Fact]
+    public async Task CancelledRead_IsReportedAsCancellationRatherThanFailure()
+    {
+        var runner = new FakeRunner { Result = new ProcessResult(-1, "", "", WasCancelled: true) };
+        var service = new HolmesKitCommandService(runner, new FakePaths(@"C:\Holmes Kit"));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.GetSystemInfoAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
