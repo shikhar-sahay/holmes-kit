@@ -46,6 +46,7 @@ public class MainWindowConstructionTests
                 stage = "window construction";
                 var fixtureService = new ConstructionService();
                 var fixture = new MainViewModel(fixtureService, new ConstructionPaths());
+                fixture.RefreshSystemCommand.Execute(null);
                 var outputDirectory = Environment.GetEnvironmentVariable("HOLMESKIT_VISUAL_REVIEW_DIR");
                 // Ordinary construction must never depend on native scans or modal query errors.
                 var window = string.IsNullOrWhiteSpace(outputDirectory)
@@ -190,9 +191,25 @@ public class MainWindowConstructionTests
         public Task<ProcessResult> RunOperationAsync(string id, IProgress<string>? progress, CancellationToken token) => RejectMutation();
         public Task<ProcessResult> ToggleStartupAsync(StartupEntry entry, CancellationToken token) => RejectMutation();
         public Task<ProcessResult> UninstallAsync(InstalledApplication app, CancellationToken token) => RejectMutation();
-        public Task<SystemSnapshot> GetSystemInfoAsync(CancellationToken token) => Task.FromResult(new SystemSnapshot { ComputerName = "Construction fixture", CpuName = "Fixture processor" });
+        public Task<SystemSnapshot> GetSystemInfoAsync(CancellationToken token) => Task.FromResult(new SystemSnapshot { ComputerName = "Construction fixture", CpuName = "Fixture processor",
+            Disks = [new() { Name = "C:", UsedBytes = 750, FreeBytes = 250, TotalBytes = 1000, Percent = 75 }] });
         public Task<IReadOnlyList<StartupEntry>> GetStartupEntriesAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<StartupEntry>>([]);
         public Task<IReadOnlyList<InstalledApplication>> GetApplicationsAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<InstalledApplication>>([]);
+    }
+
+    [Fact]
+    public void InlineOutputRuns_ExplicitlyUseOneWayBindings()
+    {
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        var files = Directory.GetFiles(Path.Combine(FindRepositoryRoot(), "src", "HolmesKit.Desktop"), "*.xaml", SearchOption.AllDirectories)
+            .Where(path => !path.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !path.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar));
+        foreach (var file in files)
+            foreach (var run in XDocument.Load(file).Descendants(presentation + "Run"))
+            {
+                var text = (string?)run.Attribute("Text");
+                if (text?.Contains("{Binding", StringComparison.Ordinal) == true)
+                    Assert.Contains("Mode=OneWay", text);
+            }
     }
 
     [Fact]
