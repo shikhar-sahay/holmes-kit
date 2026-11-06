@@ -1,0 +1,16 @@
+<Window x:Class="HolmesKit.Desktop.ConfirmationWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Review operation" Width="590" Height="510" MinWidth="440" MinHeight="360"
+ WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="CanResizeWithGrip"
+ UseLayoutRounding="True">
+ <Grid Margin="24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <TextBlock x:Name="OperationHeading" Style="{StaticResource PageTitleStyle}"/>
+  <TextBlock Grid.Row="1" Text="Review scope and recovery limits before continuing." Style="{StaticResource PageSubtitleStyle}" Margin="0,8,0,18"/>
+  <TextBox Grid.Row="2" x:Name="Details" AutomationProperties.Name="Operation scope, risks and recovery limits" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0" Padding="0,0,10,0"/>
+  <Grid Grid.Row="3" Margin="0,20,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBlock Text="No changes until you confirm." Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+   <StackPanel Grid.Column="1" Orientation="Horizontal"><Button x:Name="CancelAction" Content="_Cancel" IsCancel="True" IsDefault="True" MinWidth="84" Margin="0,0,8,0"/><Button Content="_Confirm" Click="ConfirmClick" MinWidth="84"/></StackPanel>
+  </Grid>
+ </Grid>
+</Window>

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -21,12 +22,19 @@ public class MainWindowConstructionTests
         var stage = "STA startup";
         var thread = new Thread(() =>
         {
+            var bindingErrors = new BindingErrorListener();
+            var previousLevel = PresentationTraceSources.DataBindingSource.Switch.Level;
+            PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
+            PresentationTraceSources.DataBindingSource.Listeners.Add(bindingErrors);
             try
             {
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
                 stage = "application resources";
                 var app = new App { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
-                app.InitializeComponent();
+                // Load the actual theme resources without App.xaml's StartupUri (which opens a window).
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HolmesKit;component/Themes/DarkPalette.xaml") });
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HolmesKit;component/Themes/Controls.xaml") });
+                PumpDispatcher();
                 stage = "window construction";
                 var window = new MainWindow { Width = 1120, Height = 760 };
                 var pages = Assert.IsType<TabControl>(window.FindName("ShellTabs"));
@@ -41,6 +49,12 @@ public class MainWindowConstructionTests
                     window.WindowStartupLocation = WindowStartupLocation.Manual;
                     window.Show();
                     WaitForIdle(window, TimeSpan.FromSeconds(10));
+                    // Allow a second real CPU counter sample; do not seed charts with fixture history.
+                    var sampleFrame = new DispatcherFrame();
+                    var sampleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.2) };
+                    sampleTimer.Tick += (_, _) => { sampleTimer.Stop(); sampleFrame.Continue = false; };
+                    sampleTimer.Start();
+                    Dispatcher.PushFrame(sampleFrame);
                     for (var index = 0; index < pages.Items.Count; index++)
                     {
                         pages.SelectedIndex = index;
@@ -70,6 +84,10 @@ public class MainWindowConstructionTests
                 }
                 else
                 {
+                    var model = Assert.IsType<MainViewModel>(window.DataContext);
+                    var now = DateTimeOffset.UtcNow;
+                    model.Dashboard.Record(new(now.AddSeconds(-2), null, 1000, 250, 120));
+                    model.Dashboard.Record(new(now, 25, 1000, 200, 122));
                     window.ApplyTemplate();
                     stage = "window measurement";
                     window.Measure(new Size(1120, 760));
@@ -79,14 +97,42 @@ public class MainWindowConstructionTests
                     {
                         pages.SelectedIndex = index;
                         window.UpdateLayout();
+                        PumpDispatcher();
                         Assert.True(((TabItem)pages.Items[index]).IsSelected);
                     }
+                    foreach (var size in new[] { new Size(900, 620), new Size(1600, 900) })
+                    {
+                        window.Width = size.Width; window.Height = size.Height;
+                        for (var index = 0; index < pages.Items.Count; index++)
+                        {
+                            pages.SelectedIndex = index;
+                            window.Measure(size); window.Arrange(new Rect(size)); window.UpdateLayout();
+                            PumpDispatcher();
+                        }
+                    }
+                    Assert.False(model.IsBusy); // No Loaded event, queries or modifying commands.
                 }
+                stage = "confirmation construction";
+                var confirmation = new ConfirmationWindow("Review test operation", "Scope\nRecovery limitations\nNo system operation is invoked by this test.");
+                confirmation.Measure(new Size(590, 510));
+                confirmation.Arrange(new Rect(0, 0, 590, 510));
+                confirmation.UpdateLayout();
+                var cancel = Assert.IsType<Button>(confirmation.FindName("CancelAction"));
+                Assert.True(cancel.IsCancel);
+                Assert.True(cancel.IsDefault);
+                if (!string.IsNullOrWhiteSpace(outputDirectory)) SaveScreenshot(confirmation, Path.Combine(outputDirectory, "confirmation.png"));
+                confirmation.Close();
+                Assert.Empty(bindingErrors.Errors);
                 window.Close();
                 stage = "shutdown";
                 app.Shutdown();
             }
             catch (Exception ex) { failure = ex; }
+            finally
+            {
+                PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingErrors);
+                PresentationTraceSources.DataBindingSource.Switch.Level = previousLevel;
+            }
         });
         thread.IsBackground = true;
         thread.SetApartmentState(ApartmentState.STA);
@@ -96,6 +142,13 @@ public class MainWindowConstructionTests
             : TimeSpan.FromMinutes(2);
         Assert.True(thread.Join(timeout), $"MainWindow construction timed out during {stage}.");
         Assert.Null(failure);
+    }
+
+    private sealed class BindingErrorListener : TraceListener
+    {
+        public List<string> Errors { get; } = [];
+        public override void Write(string? message) { if (!string.IsNullOrWhiteSpace(message)) Errors.Add(message); }
+        public override void WriteLine(string? message) => Write(message);
     }
 
     [Fact]

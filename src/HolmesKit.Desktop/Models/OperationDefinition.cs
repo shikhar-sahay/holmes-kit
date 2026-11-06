@@ -8,7 +8,19 @@ public sealed record OperationDefinition(
     string Affects,
     string Tradeoff,
     string Restart,
-    bool IsRestore = false);
+    bool IsRestore = false)
+{
+    public string RecoveryDescription => Id switch
+    {
+        "cleanup-temp" => "Deleted files cannot be recovered by HolmesKit.",
+        "cleanup-background" or "restart-explorer" => "Closed windows and unsaved work cannot be recovered.",
+        "network-maintenance" or "gaming-latency" or "restore-network" => "Network recovery is partial/reset-only; this is not a saved network profile.",
+        "hibernation-disable" or "restore-hibernation" => "Hibernation uses a reset action, not exact previous-state recovery.",
+        "core-full" or "gaming-fps" or "gaming-full" or "apply-all" => "Managed settings use the retained baseline; deleted files, unsaved work and some resets are not reversible.",
+        "ui-responsive" => "Managed registry values are captured. NTFS configuration is not exact-state recovery.",
+        _ => "Managed settings use a retained baseline. Restore revalidates scope and skips external conflicts."
+    };
+}
 
 public static class OperationCatalog
 {
@@ -30,7 +42,7 @@ public static class OperationCatalog
         new("gaming-latency", "Gaming", "Latency Maintenance", "Applies the existing TCP, DNS, RSS, Nagle, and update-delivery session changes.", "TCP/IP, Winsock, BITS, Delivery Optimization", "Bulk transfer throughput may decrease; update delivery services are stopped for the session.", "Recommended"),
         new("gaming-full", "Gaming", "Full Gaming Prep", "Runs both HolmesKit gaming sequences.", "All FPS and latency areas above", "Combines all listed gaming tradeoffs.", "Recommended"),
 
-        new("apply-all", "ApplyAll", "Apply All Tweaks", "Runs every established HolmesKit optimization after creating the registry backup.", "Core, advanced, services, hibernation, gaming, network", "This is the broadest change set; review each category before proceeding.", "Recommended"),
+        new("apply-all", "ApplyAll", "Apply All Tweaks", "Runs every established HolmesKit optimization after validating the retained recovery baseline.", "Core, advanced, services, hibernation, gaming, network", "This is the broadest change set; review each category before proceeding.", "Recommended"),
 
         new("restore-registry", "Restore", "Restore Managed Registry Values", "Restores captured value existence, type and data from the retained baseline.", "Only allowlisted HolmesKit registry values", "Conflicting external changes are skipped; legacy exports require manual review. NTFS/network defaults are not restored here.", "Sign-out may be required", true),
         new("restore-power", "Restore", "Restore Previous Power Plan", "Selects the original captured power-plan GUID without recreating or deleting schemes.", "Active Windows power plan", "Requires the original plan to remain available; external changes are skipped.", "No", true),

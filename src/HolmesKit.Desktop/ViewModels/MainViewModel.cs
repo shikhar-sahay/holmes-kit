@@ -60,6 +60,7 @@ public sealed class MainViewModel : ObservableObject
     public IReadOnlyList<OperationDefinition> RestoreOperations => OperationCatalog.All.Where(x => x.Category == "Restore").ToList();
     public OperationDefinition ApplyAllOperation => OperationCatalog.All.Single(x => x.Category == "ApplyAll");
     public ObservableCollection<string> Activity { get; } = [];
+    public DashboardViewModel Dashboard { get; } = new();
     public ObservableCollection<StartupEntry> StartupEntries { get; } = [];
     public ObservableCollection<InstalledApplication> Applications { get; } = [];
     public ObservableCollection<string> RecentActivity { get; } = [];
@@ -276,9 +277,9 @@ public sealed class MainViewModel : ObservableObject
         var backup = Path.Combine(paths.RootDirectory, "HolmesKit_Backups", "latest");
         var inspection = BackupInspector.Inspect(backup);
         HasBackup = inspection.IsValid;
-        BackupStatus = inspection.IsValid ? "Recovery baseline ready" : inspection.Summary.StartsWith("Legacy", StringComparison.Ordinal) ? "Legacy backup: manual review" : inspection.Exists ? "Recovery unavailable" : "No baseline yet";
-        BackupTimestamp = inspection.Timestamp is null ? "Created before the first optimization" : $"Last changed {inspection.Timestamp:MMM d, yyyy · h:mm tt}";
-        BackupDetails = inspection.Summary;
+        BackupStatus = inspection.State;
+        BackupTimestamp = inspection.Timestamp is null ? "No verified baseline timestamp" : $"Baseline created {inspection.Timestamp:MMM d, yyyy · h:mm tt}";
+        BackupDetails = inspection.Summary + (inspection.IsValid ? $" Last recorded operation: {inspection.LastOperation}." : "");
         RefreshCommandStates();
     }
 

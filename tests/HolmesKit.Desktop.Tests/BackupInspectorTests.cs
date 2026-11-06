@@ -1,9 +1,42 @@
 using HolmesKit.Desktop.Services;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace HolmesKit.Desktop.Tests;
 
 public class BackupInspectorTests
 {
+    [Theory]
+    [InlineData("Running", "Recovery blocked: interrupted operation")]
+    [InlineData("Unknown", "Recovery blocked: invalid journal")]
+    public void JournalState_IsExplicitAndNeverEnablesRestore(string status, string expected)
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var payload = JsonSerializer.Serialize(new { Version = 1, Status = status });
+            var journal = Path.Combine(path, "baseline.json");
+            File.WriteAllText(journal, JsonSerializer.Serialize(new { Payload = payload,
+                Sha256 = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(payload))) }));
+            var result = BackupInspector.InspectJournal(journal);
+            Assert.False(result.IsValid);
+            Assert.Equal(expected, result.State);
+        });
+    }
+
+    [Fact]
+    public void CorruptJournal_IsBlockedNotMissing()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var journal = Path.Combine(path, "baseline.json");
+            File.WriteAllText(journal, "not json");
+            var result = BackupInspector.InspectJournal(journal);
+            Assert.True(result.Exists);
+            Assert.False(result.IsValid);
+            Assert.Equal("Recovery blocked: invalid journal", result.State);
+        });
+    }
     private static readonly string[] AbsentEntries =
     [
         @"HKCU\Control Panel\Desktop|desktop.reg",
