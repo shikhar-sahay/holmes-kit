@@ -12,15 +12,15 @@ public partial class MainWindow : Window
     private CancellationTokenSource? monitoring;
     private bool closed;
 
-    public MainWindow()
+    public MainWindow() : this(null) { }
+
+    public MainWindow(MainViewModel? model)
     {
         InitializeComponent();
         var paths = new HolmesKitPathResolver();
-        viewModel = new MainViewModel(new HolmesKitCommandService(new ProcessRunner(), paths), paths)
-        {
-            Confirm = (title, message) => new ConfirmationWindow(title, message) { Owner = this }.ShowDialog() == true,
-            Notify = (title, message, icon) => MessageBox.Show(this, message, title, MessageBoxButton.OK, icon)
-        };
+        viewModel = model ?? new MainViewModel(new HolmesKitCommandService(new ProcessRunner(), paths), paths);
+        viewModel.Confirm = (title, message) => new ConfirmationWindow(title, message) { Owner = this }.ShowDialog() == true;
+        viewModel.Notify = (title, message, icon) => MessageBox.Show(this, message, title, MessageBoxButton.OK, icon);
         DataContext = viewModel;
         viewModel.Activity.CollectionChanged += (_, _) => Dispatcher.BeginInvoke(() =>
         {
@@ -28,6 +28,7 @@ public partial class MainWindow : Window
         });
         Loaded += async (_, _) => { await viewModel.InitializeAsync(); UpdateMonitoring(); };
         StateChanged += (_, _) => UpdateMonitoring();
+        IsVisibleChanged += (_, _) => UpdateMonitoring();
         viewModel.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainViewModel.IsBusy)) UpdateMonitoring(); };
         Closed += (_, _) => { closed = true; StopMonitoring(); };
         Closing += (_, e) =>
@@ -73,7 +74,7 @@ public partial class MainWindow : Window
     private void UpdateMonitoring()
     {
         if (viewModel is null || closed) return;
-        if (!DesktopMonitor.ShouldRun(IsLoaded, WindowState == WindowState.Minimized, ShellTabs.SelectedIndex, viewModel.IsBusy))
+        if (!DesktopMonitor.ShouldRun(IsLoaded && IsVisible, WindowState == WindowState.Minimized, ShellTabs.SelectedIndex, viewModel.IsBusy))
         { StopMonitoring(); return; }
         if (monitoring is not null) return;
         var lifetime = new CancellationTokenSource();

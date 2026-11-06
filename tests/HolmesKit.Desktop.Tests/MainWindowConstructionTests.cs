@@ -6,6 +6,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using HolmesKit.Desktop.ViewModels;
+using HolmesKit.Desktop.Models;
+using HolmesKit.Desktop.Services;
 
 namespace HolmesKit.Desktop.Tests;
 
@@ -36,10 +38,16 @@ public class MainWindowConstructionTests
                 app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HolmesKit;component/Themes/Controls.xaml") });
                 PumpDispatcher();
                 stage = "window construction";
-                var window = new MainWindow { Width = 1120, Height = 760 };
+                var fixtureService = new ConstructionService();
+                var fixture = new MainViewModel(fixtureService, new ConstructionPaths());
+                var outputDirectory = Environment.GetEnvironmentVariable("HOLMESKIT_VISUAL_REVIEW_DIR");
+                // Ordinary construction must never depend on native scans or modal query errors.
+                var window = string.IsNullOrWhiteSpace(outputDirectory)
+                    ? new MainWindow(fixture) { Width = 1120, Height = 760 }
+                    : new MainWindow { Width = 1120, Height = 760 };
+                fixture.Notify = (_, message, _) => throw new InvalidOperationException(message);
                 var pages = Assert.IsType<TabControl>(window.FindName("ShellTabs"));
                 Assert.Equal(10, pages.Items.Count);
-                var outputDirectory = Environment.GetEnvironmentVariable("HOLMESKIT_VISUAL_REVIEW_DIR");
                 if (!string.IsNullOrWhiteSpace(outputDirectory))
                 {
                     Directory.CreateDirectory(outputDirectory);
@@ -89,14 +97,18 @@ public class MainWindowConstructionTests
                     model.Dashboard.Record(new(now.AddSeconds(-2), null, 1000, 250, 120));
                     model.Dashboard.Record(new(now, 25, 1000, 200, 122));
                     window.ApplyTemplate();
-                    stage = "window measurement";
+                    stage = "initial window measure";
                     window.Measure(new Size(1120, 760));
+                    stage = "initial window arrange";
                     window.Arrange(new Rect(0, 0, 1120, 760));
+                    stage = "initial window layout";
                     window.UpdateLayout();
                     for (var index = 0; index < pages.Items.Count; index++)
                     {
+                        stage = $"page {index}, 1120x760 selection";
                         pages.SelectedIndex = index;
                         window.UpdateLayout();
+                        stage = $"page {index}, 1120x760 dispatcher";
                         PumpDispatcher();
                         Assert.True(((TabItem)pages.Items[index]).IsSelected);
                     }
@@ -105,12 +117,15 @@ public class MainWindowConstructionTests
                         window.Width = size.Width; window.Height = size.Height;
                         for (var index = 0; index < pages.Items.Count; index++)
                         {
+                            stage = $"page {index}, {size} layout";
                             pages.SelectedIndex = index;
                             window.Measure(size); window.Arrange(new Rect(size)); window.UpdateLayout();
+                            stage = $"page {index}, {size} dispatcher";
                             PumpDispatcher();
                         }
                     }
-                    Assert.False(model.IsBusy); // No Loaded event, queries or modifying commands.
+                    Assert.False(model.IsBusy);
+                    Assert.Equal(0, fixtureService.Mutations);
                 }
                 stage = "confirmation construction";
                 var confirmation = new ConfirmationWindow("Review test operation", "Scope\nRecovery limitations\nNo system operation is invoked by this test.");
@@ -149,6 +164,26 @@ public class MainWindowConstructionTests
         public List<string> Errors { get; } = [];
         public override void Write(string? message) { if (!string.IsNullOrWhiteSpace(message)) Errors.Add(message); }
         public override void WriteLine(string? message) => Write(message);
+    }
+
+    private sealed class ConstructionPaths : IHolmesKitPathResolver
+    {
+        public string RootDirectory { get; } = Path.Combine(Path.GetTempPath(), "HolmesKit.Construction." + Guid.NewGuid().ToString("N"));
+        public string BatchFile => Path.Combine(RootDirectory, "unused.bat");
+        public string BridgeScript => Path.Combine(RootDirectory, "unused.ps1");
+        public string LogFile => Path.Combine(RootDirectory, "unused.log");
+        public void Validate() => throw new InvalidOperationException("No native process is permitted in construction tests.");
+    }
+    private sealed class ConstructionService : IHolmesKitCommandService
+    {
+        public int Mutations;
+        private Task<ProcessResult> RejectMutation() { Mutations++; throw new InvalidOperationException("No mutations permitted."); }
+        public Task<ProcessResult> RunOperationAsync(string id, IProgress<string>? progress, CancellationToken token) => RejectMutation();
+        public Task<ProcessResult> ToggleStartupAsync(StartupEntry entry, CancellationToken token) => RejectMutation();
+        public Task<ProcessResult> UninstallAsync(InstalledApplication app, CancellationToken token) => RejectMutation();
+        public Task<SystemSnapshot> GetSystemInfoAsync(CancellationToken token) => Task.FromResult(new SystemSnapshot { ComputerName = "Construction fixture", CpuName = "Fixture processor" });
+        public Task<IReadOnlyList<StartupEntry>> GetStartupEntriesAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<StartupEntry>>([]);
+        public Task<IReadOnlyList<InstalledApplication>> GetApplicationsAsync(CancellationToken token) => Task.FromResult<IReadOnlyList<InstalledApplication>>([]);
     }
 
     [Fact]
@@ -196,7 +231,9 @@ public class MainWindowConstructionTests
     private static void PumpDispatcher()
     {
         var frame = new DispatcherFrame();
-        var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromMilliseconds(150) };
+        // An idle-priority exit can starve behind continuous software-render work on hosted runners.
+        // Still pump binding/layout work, but give the bounded frame exit priority over render traffic.
+        var timer = new DispatcherTimer(DispatcherPriority.Send) { Interval = TimeSpan.FromMilliseconds(150) };
         timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
         timer.Start();
         Dispatcher.PushFrame(frame);
