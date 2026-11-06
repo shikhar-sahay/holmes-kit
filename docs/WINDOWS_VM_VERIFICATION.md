@@ -2,6 +2,20 @@
 
 Never perform native optimization/recovery integration tests on the development workstation. Ordinary tests use temporary files, command stubs and mocked native adapters.
 
+## Task 06 status and additional scenarios
+
+Native VM validation: **NOT EXECUTED**. No specifically authorized disposable Windows VM, checkpoint and rollback procedure were available. No native mutation occurred on the workstation. Windows 11 read-only metadata/formula comparisons passed; this does not establish apply/recovery correctness or Windows 10 compatibility.
+
+Add these cases to the authorized matrix before public distribution:
+
+- Change a startup entry externally after the review list loads. Both CLI and Desktop must reject the stale enabled state and require refresh/reconfirmation; do not invert the approved action.
+- Use disposable registered EXE uninstall fixtures with no arguments, Unicode/spaces in names and paths, MSI fixtures, cancellation/restart/failure results and stale registrations. Confirm both identity fields survive actual process transport. Never use important installed software as a fixture.
+- Test a slow read beyond 60 seconds, explicit read cancellation and missing PowerShell. A modifying operation must not inherit a deadline or cancellable process lifetime.
+- Select Startup/Applications during a slow system refresh: lists should load once the busy query finishes. Verify filter/sort row identity and protected actions.
+- Complete full keyboard, Narrator, actual 100/125/150% DPI and high-contrast checks in an isolated authorized desktop. Task 06's shared helper returned a Chrome screenshot for a HolmesKit accessibility tree; input attempts were stopped rather than fighting focus. Rendered-layout checks are not interactive acceptance.
+
+Retained startup elevation means alternate-user credentials target that administrator's HKCU. Elevation-on-demand remains deferred; do not test a nonexistent helper as though it were implemented. Record OS edition/build and serviced runtime; see the handbook for the privilege decision and current compatibility limits.
+
 ## Execution authorization and evidence
 
 No suitable VM has been explicitly authorized in the Task 03 workspace. Native scenarios are **NOT EXECUTED**. A virtualization indicator is not permission. An operator must separately confirm the VM is disposable, a usable checkpoint exists, modifications are authorized, and reversion is possible. Do not run native tests on the development workstation.

@@ -85,9 +85,9 @@ Task 05 directly observed a white confirmation background: an implicit Window st
 The packaged elevated executable's launch/data evidence, non-elevated fixture interaction, rendered captures, and automated tests are separate evidence classes. Integrity boundaries were preserved; no UAC/security workaround was introduced. Shared-helper focus/cache errors prevented complete click-by-click acceptance. Do not mark that gate PASS on the strength of screenshots or construction tests alone.
 
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.5.0-rc.2
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip
-Get-FileHash ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip -Algorithm SHA256
+./tools/Publish-Portable.ps1 -Version 0.6.0-rc.1
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.6.0-rc.1-win-x64.zip
+Get-FileHash ./artifacts/packages/HolmesKit-0.6.0-rc.1-win-x64.zip -Algorithm SHA256
 ```
 
 Compare the archive hash to its `.sha256` sidecar. The verifier also checks complete runtime layout, duplicate/traversal paths, manifest coverage and each payload hash; it does not authenticate the publisher or execute the EXE. Keep each version unique; tooling does not overwrite release assets. Build/archive timestamps and SDK differences mean bit-for-bit reproducibility is not guaranteed.
@@ -97,3 +97,30 @@ Windows CI runs safe verification. The manual `Prepare unsigned portable candida
 If workflow dispatch is unavailable to the connected tools, an authorized operator can open **Actions → Prepare unsigned portable candidate → Run workflow**, select `master`, enter a fresh version (do not overwrite a local/hosted candidate identifier), then download `unsigned-portable-candidate`. Extract the artifact wrapper and run `Test-PortableCandidate.ps1` on its product ZIP; compare engine/module/document payloads to that run's exact source SHA. A successful local package is not a hosted packaging result, and neither publishes a GitHub Release.
 
 Candidates are unsigned; SmartScreen warnings may occur. Do not weaken Windows security to hide them. A real certificate and signing policy would be separate work. A public Release/download site requires the [release gates](RELEASE_READINESS.md), owner approval and a recorded VM evidence matrix. No public release or website is created by these scripts.
+
+## Task 06 functional hardening and privilege decision
+
+Desktop retains `requireAdministrator` at startup and `uiAccess=false`. Cancelling UAC prevents startup; it is not an in-app error. System/telemetry reads normally need no administrator token; HKLM startup approval, scheduled tasks, services, networking and engine writes do. Enumeration can be incomplete under a restricted account. Internal engine markers are coordination, not caller authentication. `--run` remains an allowlisted already-authorized caller interface, with no interactive console prompt.
+
+Elevation-on-demand is **deferred**. A safe follow-up must provide an authenticated same-user IPC endpoint with explicit operation IDs, request/result correlation and replay rejection; validate the helper executable and adjacent mutable scripts; protect shared state with appropriate ACLs; preserve the engine lock and process lifetime; and reject alternate-user UAC until HKCU ownership is explicitly resolved. Never elevate arbitrary command text or trust an environment variable as approval. Progress/error capture and UAC denial must be tested with inert adapters and then an authorized VM. Simply changing the manifest or adding `runas` would not meet these requirements. [Microsoft's manifest reference](https://learn.microsoft.com/en-us/windows/win32/sbscs/application-manifests) documents execution levels; this project-specific decision follows the current journal/account architecture.
+
+Management actions now share the PowerShell bridge in both interfaces. Startup changes re-enumerate the exact identity/protection and reject a changed enabled state before writing. A race with another tool after that check is still possible. Uninstall transport uses separate Base64 scalar `-Data` and `-NameData` parameters: native Windows PowerShell `-File` does not deliver two trailing CLI arguments as the former array contract assumed. The bridge validates the current registered name/command and rejects relative, interpreter-based and ambiguous commands. Argument-free executable registrations omit `ArgumentList`. MSI cancellation (1602), restart-required (3010) and failures remain distinct. Unsupported registrations require Windows Settings; HolmesKit does not provide app recovery. CLI menus and fresh confirmation remain intact; they need Batch/PowerShell, not the GUI/.NET.
+
+Read-only bridge queries have a 60-second deadline and retain user cancellation. Timeout is a failure with a diagnostic; user cancellation is Cancelled. Neither deadline nor cancellation kills a modifying operation. Stale/null/malformed management identities fail instead of becoming actionable rows; empty application enumeration returns `[]`. Success/failure output from management commands appears in Activity, including stdout-only and diagnostic-free failures. Opening the log folder handles access/launch errors. Pages selected while another query runs are loaded after it finishes; no second click is needed. Existing bounded logs, sticky failure/partial states, monitoring lifecycle and close guards remain.
+
+Local safe verification covers actual parameter binding through `powershell.exe -File` with an inert script, AST-selected action bodies with native functions replaced, management outcomes and actual WPF Loaded/selection/busy events. The fixture's three mutation methods remain disconnected. A real uninstall, startup change, optimization or recovery was **not** executed. Source/read-only comparisons on the current Windows 11 workstation do not certify Windows 10, policy or alternate-user scenarios.
+
+Use currently serviced Windows/.NET builds when preparing a public candidate. The [.NET 10 OS matrix](https://github.com/dotnet/core/blob/main/release-notes/10.0/supported-os.md) distinguishes Windows releases/editions; “Windows 10/11” is a target family, not support for all releases. Record exact OS/SDK/bundled-runtime versions, and rebuild with current security servicing before public distribution. The local pinned SDK is development evidence, not a servicing policy.
+
+### Owner licensing and distribution choices
+
+No licence is chosen here. These are decision aids; review the actual terms and third-party notices before approval:
+
+| Option | Practical consequence |
+|---|---|
+| [MIT](https://opensource.org/license/mit) | Broad reuse, modification and commercial distribution; retain copyright/permission notices. |
+| [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | Permissive reuse with explicit patent provisions and redistribution/notice conditions. |
+| [GPLv3](https://opensource.org/license/gpl-3.0) | Copyleft distribution, including corresponding-source and licence obligations for covered derivatives. |
+| Proprietary / all rights reserved | Owner defines a distribution/use agreement; no open-source permission is implied. |
+
+The MVP distribution should remain a complete portable ZIP with version, source SHA, checksums, unsigned disclosure and preserved recovery data. A future manual GitHub Release can link concise installation/recovery notes after owner approval and native validation. An installer/updater or public static overview is optional later; a website cannot perform local privileged operations. No public assets are published by this milestone.

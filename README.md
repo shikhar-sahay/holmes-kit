@@ -23,7 +23,7 @@ Home shows live CPU and physical-memory usage with a fixed 0–100% scale and up
 
 Storage figures describe **capacity**, not disk activity. System Info and storage/power metadata remain on-demand snapshots; use **Refresh** there to update them. Startup and Applications retain search, sorting, refresh and confirmed row actions. Recovery distinguishes missing, legacy, interrupted and invalid baselines; a ready display is a preliminary check, not a guarantee of conflict-free recovery.
 
-Task 05 corrected a white-background confirmation dialog by explicitly applying the shared Window style, retained Cancel as the default, simplified Home's OS/unknown-memory labels, and made Clear view compact and right-aligned. The packaged Task 04 application launched with live data; elevated input restrictions and an unstable shared desktop helper limited interactive acceptance. All ten pages received rendered-layout review using the same views with native mutations disconnected. Full keyboard, screen-reader, DPI and high-contrast acceptance remain outstanding.
+Task 06 fixes uninstall identity transport across Windows PowerShell, argument-free uninstallers, stale startup-state rejection and management-page loading after a busy query. CLI management actions reuse the same validation as Desktop without requiring .NET. Read-only bridge queries can be cancelled and time out after 60 seconds; modifying operations are never automatically timed out. Native Windows recovery, complete interactive acceptance, screen-reader and actual DPI/high-contrast testing remain release gates. See the [current engineering report](https://github.com/shikhar-sahay/holmes-kit/blob/master/HOLMESKIT_TASK_06_REPORT.md) for evidence and limitations.
 
 ![Current Core page, rendered by the mutation-disconnected acceptance harness](docs/screenshots/desktop-core-task05.png)
 
@@ -36,6 +36,8 @@ This is a privacy-reviewed capture of the actual WPF Core view in the inert acce
 - .NET 10 SDK for source builds; self-contained candidates include the runtime.
 
 For CLI use, run `HolmesKit.bat` as administrator. For desktop use, launch `HolmesKit.exe` and keep its adjacent `HolmesKit.bat` and complete `modules/` folder together. Declining UAC cancels startup. Per-user changes apply to the elevated account; alternate administrator credentials may target a different HKCU.
+
+Desktop still requests elevation at launch, including read-only pages. Elevation-on-demand is deferred pending an authenticated allowlisted helper, explicit account/HKCU handling and protected shared recovery storage. No generic elevated command channel has been introduced.
 
 Independently initiated changes require fresh affirmative confirmation (CLI: exactly Y/y). Blank, declined, invalid or unavailable input grants no approval. `--run` is an automation entry for an already-authorized caller, not a second console prompt. Internal engine coordination is not a security API.
 
@@ -55,8 +57,8 @@ Ordinary tests use inert command stubs, mocked native adapters and temporary fix
 ## Portable candidates
 
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.5.0-rc.2
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip
+./tools/Publish-Portable.ps1 -Version 0.6.0-rc.1
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.6.0-rc.1-win-x64.zip
 ```
 
 Copy the entire extracted folder. Packaging includes the EXE, Batch/modules, documentation, version and checksums; it excludes local recovery/logs. CI runs safe Windows tests. The manual candidate workflow creates an Actions artifact, not a public Release or tag. The verifier checks content/integrity, not publisher authenticity or native behavior. No installer, updater, signing certificate or download website is supplied.
