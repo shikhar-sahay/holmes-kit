@@ -15,7 +15,15 @@ Home; Core Optimization; Advanced Tweaks; Gaming Mode; Apply All; Startup Manage
 
 Operations include cache cleanup, power selection, managed registry/service changes, startup management and network maintenance. Startup Manager toggles entries without deleting them; Applications launches registered uninstallers. Review shows tradeoffs and restart guidance. Apply All confirms once and stops on checked failures, but earlier changes may remain.
 
-![HolmesKit Core Optimization](docs/screenshots/desktop-core.png)
+## Desktop experience
+
+The native desktop uses a shared matte-black theme, compact sidebar and HolmesKit's CLI ASCII wordmark. Core, Advanced, Gaming and Restore keep concise operation rows; expand **Scope and recovery** for affected components, administrator/restart requirements and recovery limits. Review opens a scrollable confirmation dialog with **Cancel** as the default action. Apply All remains an explicit, broad change set.
+
+Home shows live CPU and physical-memory usage with a fixed 0–100% scale and up to 60 seconds of actual samples. Read-only Windows kernel APIs run in the background every two seconds; no PowerShell processes are launched for these samples. Monitoring pauses off Home, while minimized or busy, and stops on close. The first CPU reading needs two samples. Missing readings and paused intervals remain gaps, not zeroes. Text values accompany the charts; data is kept in memory only.
+
+Storage figures describe **capacity**, not disk activity. System Info and storage/power metadata remain on-demand snapshots; use **Refresh** there to update them. Startup and Applications retain search, sorting, refresh and confirmed row actions. Recovery distinguishes missing, legacy, interrupted and invalid baselines; a ready display is a preliminary check, not a guarantee of conflict-free recovery.
+
+High-contrast brush support, visible keyboard focus and resizable/scrollable content are implemented. Interactive screen-reader, DPI and full visual validation remain outstanding. The [earlier Core screenshot](docs/screenshots/desktop-core.png) predates this theme; replacement screenshots await authorized visual review.
 
 ## Requirements and running
 
@@ -43,8 +51,8 @@ Ordinary tests use inert command stubs, mocked native adapters and temporary fix
 ## Portable candidates
 
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.3.0-rc.1
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.3.0-rc.1-win-x64.zip
+./tools/Publish-Portable.ps1 -Version 0.4.0-rc.3
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip
 ```
 
 Copy the entire extracted folder. Packaging includes the EXE, Batch/modules, documentation, version and checksums; it excludes local recovery/logs. CI runs safe Windows tests. The manual candidate workflow creates an Actions artifact, not a public Release or tag. The verifier checks content/integrity, not publisher authenticity or native behavior. No installer, updater, signing certificate or download website is supplied.

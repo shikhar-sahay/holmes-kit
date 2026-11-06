@@ -9,7 +9,7 @@ No suitable VM has been explicitly authorized in the Task 03 workspace. Native s
 On the authorized VM, capture read-only evidence before, after and after reversion, using a fresh output filename each time:
 
 ```powershell
-./tools/Collect-ValidationEvidence.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.3.0-rc.1-win-x64.zip -EnvironmentLabel Win11-en-admin -CheckpointId checkpoint-name -Phase Before -OutputPath ./artifacts/before-private.json -IncludeManagedState
+./tools/Collect-ValidationEvidence.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip -EnvironmentLabel Win11-en-admin -CheckpointId checkpoint-name -Phase Before -OutputPath ./artifacts/before-private.json -IncludeManagedState
 ```
 
 The collector never applies changes and leaves every scenario NOT EXECUTED. It records OS/PowerShell/runtime, source commit, candidate SHA-256, checkpoint label and optional managed state. Operator authorization, actual outcomes and successful reversion must be recorded separately. Managed state can contain sensitive paths/commands: never commit or upload raw evidence. It refuses to overwrite an existing file.
@@ -38,3 +38,9 @@ Before a public release, use disposable Windows 10/11 x64 VMs with checkpoints, 
 The release workflow prepares CI artifacts only. Publish a versioned GitHub Release manually only after this matrix passes, project licensing is decided, candidate contents/checksums are reviewed, and unsigned-binary limitations are disclosed. Signing requires a real certificate. A portable ZIP is sufficient for the MVP; no installer/updater is implemented. Preserve the existing folder and its recovery data during upgrades. Removal deletes the extracted program only after recovery data is saved elsewhere; deleting files does not undo Windows changes.
 
 A future static GitHub Pages overview may link requirements, recovery limits, source and verified downloads. Website deployment is deferred until release validation and licensing; no browser backend is needed.
+
+## Task 04 desktop validation follow-up
+
+Native recovery remains **NOT EXECUTED**. Task 04 adds no permission to modify this workstation. The interrupted desktop review was not resumed because the operator requested non-interactive verification only. After separate authorization, review all ten pages, expanded operation details, Cancel/Confirm/close behavior using inert fixtures, error/partial/progress states, long names/commands and empty filters. Check default, 900×620 and maximized windows at 100/125/150% scaling, keyboard-only use, screen-reader output and high contrast (including selected rows and charts). Offscreen size/layout checks do not establish these results.
+
+Compare live CPU to an interval-based Windows counter over the same time window, and physical memory to total-minus-available from authoritative Windows sources. Expect the first CPU sample to be unavailable. Navigate away, minimize, run a fixture query and close; verify polling stops and returning creates only one fresh sampler. Check graph gaps across pauses, fixed 0–100% scale, bounded 60-second/31-sample history and no new metric logs/processes. Capacity data is a snapshot; never compare it as disk activity. Record startup/idle CPU/working set before making efficiency claims. Capture fresh privacy-safe screenshots only after review; the existing Core screenshot is historical.

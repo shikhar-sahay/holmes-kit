@@ -6,6 +6,18 @@ Use `HolmesKit.exe` with the complete adjacent Batch/modules folder, or run `Hol
 
 Home summarizes system and recovery state. Core, Advanced and Gaming show operation scope/tradeoffs before Review. Startup and Applications support search and Refresh; their row actions identify the selected underlying entry. System Info is an on-demand snapshot. Activity & Logs provides diagnostic output and a copyable audit log.
 
+The matte-black visual system lives in `Themes/DarkPalette.xaml` and `Themes/Controls.xaml`: shared brushes, typography, page inset, panel radius, control sizing, focus/hover/disabled states and table styling. The ASCII mark remains the CLI identity; sidebar icons use Windows fonts with a fallback. No third-party UI/chart framework is required. Windows high contrast switches brushes using system colors, but interactive accessibility/DPI approval remains a release gate.
+
+Home's CPU chart uses `GetSystemTimes`: total is kernel + user (kernel includes idle); utilization is `(delta total - delta idle) / delta total * 100`. It measures the interval between samples, not a cumulative lifetime average. `GlobalMemoryStatusEx` supplies physical total/available bytes; used is total minus available and utilization is used/total. `GetTickCount64` supplies Windows boot uptime, including sleep. It is not the time since the most recent user sign-in.
+
+Sampling uses one background loop at two-second intervals, only while Home is visible, not minimized and no command is busy. Navigation/minimization/busy transitions cancel it; reopening starts a fresh CPU counter baseline. The window cancels monitoring on close and each timer/cancellation source is disposed. The history holds at most 31 actual samples within 60 seconds. Charts use fixed 0–100% axes and actual timestamps, break unknown/long gaps, and never fill inactive periods with invented data. The first CPU sample is unavailable; text values accompany both charts. No sample history is saved or sent anywhere. Native metric failures show unavailable values; unexpected monitoring errors remain in session output.
+
+System Info, power and storage capacity retain the existing refresh-based bridge. Home's storage figures are capacity used/free, **not I/O activity**; refresh System Info for new capacity/power metadata. CPU/memory snapshots can differ from live values because their observation times differ. No overall health score, FPS forecast or performance guarantee is implied.
+
+Operation rows expand scope/recovery details and retain visible tradeoffs. Review opens the shared scrollable dialog; Escape, Cancel or closing the dialog declines, and Cancel is the default keyboard action. Confirm is still required before the existing ViewModel sends a command. The Activity page shows actual output and indeterminate progress, not an invented percentage; only read-only queries can be cancelled. Persistent Failed/Partial status must be investigated.
+
+Recovery state labels distinguish no baseline, legacy/manual review, interrupted operation, invalid journal and ready baseline. The displayed date is **baseline creation**, not last modification. Last recorded engine operation is shown when recognized. A ready badge checks the envelope/identity at inspection time; the engine still validates full scope and conflicts at execution. A blocked managed restore does not grant permission to delete or edit the journal. Independent reset actions remain separately confirmed and do not promise exact recovery.
+
 An operation starts only after affirmative confirmation. CLI accepts exactly Y/y; other input does not authorize changes. Apply All confirms once for the disclosed existing sequence, not for every internal step. It can close browsers/apps, delete files, change services and disrupt networking. Save work and use a recoverable environment. A failed stage may leave earlier changes applied.
 
 Cancel is disabled and normal window closure blocked during mutations. Read-only queries remain cancellable. Killing the process or losing power is not rollback. Investigate a persistent failure/partial state in Activity & Logs rather than repeating Apply All blindly.
@@ -46,18 +58,20 @@ dotnet build HolmesKit.slnx -c Release --no-restore
 dotnet test HolmesKit.slnx -c Release --no-build
 ```
 
-Keep `HOLMESKIT_VISUAL_REVIEW_DIR` unset for ordinary safe tests. Tests use temporary files, inert CMD leaves, mocked native adapters and AST-loaded validation functions. Never point fixtures at the production engine/state. The WPF construction collection is isolated from subprocess tests and retains a bounded cold-start timeout and exception assertions. Source compilation/fixtures do not establish native Windows recovery correctness.
+Keep `HOLMESKIT_VISUAL_REVIEW_DIR` unset for ordinary safe tests. Tests use temporary files, inert CMD leaves, mocked native adapters and AST-loaded validation functions. Never point fixtures at the production engine/state. The WPF construction collection is isolated from subprocess tests and retains a bounded cold-start timeout and exception assertions. It initializes real resources without launching StartupUri, uses an inert service even if layout callbacks fire, lays out all ten pages offscreen at 900×620, 1120×760 and 1600×900, captures binding errors, and checks the confirmation default. Its dispatcher frame exit has a bounded high-priority tick so rendering cannot starve an idle-priority exit. Dashboard tests verify counter math, bounded history, chart gaps, monitoring eligibility and cancellation. Management fixtures verify sorting/filtering do not change the confirmed action target. These are not interactive visual, DPI or native recovery validation. The optional visual-review mode opens windows and queries local metadata; run it only with explicit desktop-review authorization, and keep its private captures untracked.
 
 When modifying an existing optimization: enumerate every changed value/service/power setting, update the operation allowlist/catalog and `Get-HolmesOperationScope`, and add Before/After/conflict/type/absence/failure tests. Anything not captured must be labelled partial/reset-only/irreversible. Preserve CLI consent and non-interactive GUI dispatch. Do not change schema or adapter scope without a conservative compatibility decision; current scope mismatch fails closed.
+
+Output bindings must remain OneWay where the target defaults to editing: this includes **Run.Text**, not just read-only TextBox.Text. Task 04's dispatcher exception capture exposed an inline Run attempting to write the computed Dashboard.AvailableText property; all bound output Runs now explicitly use OneWay. Construction fixtures include a populated drive so computed disk text receives the same runtime coverage. Capture dispatcher exceptions as test failures before the application's normal error dialog; otherwise a hidden modal can disguise an exception as a timeout. Do not suppress the exception assertions to make CI green.
 
 For a native adapter change, test conversion/validation without Windows writes first, then use the [disposable-VM procedure](WINDOWS_VM_VERIFICATION.md). Review partial writes, denial, missing capabilities and interrupted publication before public release. No new optimization should be justified solely by FPS/latency claims without evidence.
 
 ## Candidate preparation and future release
 
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.3.0-rc.1
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.3.0-rc.1-win-x64.zip
-Get-FileHash ./artifacts/packages/HolmesKit-0.3.0-rc.1-win-x64.zip -Algorithm SHA256
+./tools/Publish-Portable.ps1 -Version 0.4.0-rc.3
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip
+Get-FileHash ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip -Algorithm SHA256
 ```
 
 Compare the archive hash to its `.sha256` sidecar. The verifier also checks complete runtime layout, duplicate/traversal paths, manifest coverage and each payload hash; it does not authenticate the publisher or execute the EXE. Keep each version unique; tooling does not overwrite release assets. Build/archive timestamps and SDK differences mean bit-for-bit reproducibility is not guaranteed.

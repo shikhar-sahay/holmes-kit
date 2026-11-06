@@ -25,6 +25,7 @@ This inventory comes from `HolmesKit.bat` and every script under `modules/`, not
 | Startup Manager | Run/RunOnce + logon/boot tasks, StartupApproved, protected paths | Often | Toggle again; no deletion | Varies | Yes |
 | Applications Manager | three uninstall hives; MSI/EXE registered uninstall | Often | App-specific | App-specific | Yes |
 | Logging | shared timestamped text log | No | N/A | N/A | Yes |
+| Live desktop dashboard | read-only GetSystemTimes / GlobalMemoryStatusEx / GetTickCount64 | No additional privilege | No Windows writes; in-memory history only | N/A | Home, 2 s sampling; pauses inactive/minimized/busy |
 
 ## Failure modes handled at the desktop boundary
 
@@ -38,6 +39,8 @@ This inventory comes from `HolmesKit.bat` and every script under `modules/`, not
 - missing or invalid registered uninstaller.
 
 Tests deliberately avoid privileged mutations. They cover the catalog, command construction, process output/exit capture, path discovery, and validation.
+
+Task 04 preserves all dispatcher identifiers and CLI/bridge behavior. Presentation changes include neutral matte-black resources, expandable scope/recovery details, Cancel-default confirmation, management empty/loading states and full-value tooltips. Live charts contain at most 31 real samples from the last 60 seconds; storage is capacity, not disk activity. System Info remains an on-demand snapshot. Missing/legacy/interrupted/invalid/ready recovery states are distinct; readiness is preliminary and never bypasses engine validation. No native restore guarantee is added. Full interactive review was not resumed after the operator stopped Computer Use; offscreen construction is not visual certification.
 
 Task 02 adds pure recovery-policy fixtures and actual-orchestrator lifecycle tests with all native adapters replaced. The retained baseline is shared by CLI and desktop, serialized with an exclusive file lock and atomically published with corruption checks. This is not a full-system backup. Interrupted journals, identity/scope changes and corruption fail closed for manual review. Native apply/recover behavior still requires the disposable-VM matrix in `WINDOWS_VM_VERIFICATION.md`.
 
