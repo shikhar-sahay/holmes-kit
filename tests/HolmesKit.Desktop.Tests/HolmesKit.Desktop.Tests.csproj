@@ -12,4 +12,5 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
   <ItemGroup><ProjectReference Include="..\..\src\HolmesKit.Desktop\HolmesKit.Desktop.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="..\HolmesKit.Desktop.Acceptance\HolmesKit.Desktop.Acceptance.csproj" /></ItemGroup>
 </Project>
