@@ -5,6 +5,14 @@ namespace HolmesKit.Desktop.Tests;
 public class OperationCatalogTests
 {
     [Fact]
+    public void EveryOperation_ExplainsItsRecoveryLimits()
+    {
+        Assert.All(OperationCatalog.All, operation => Assert.False(string.IsNullOrWhiteSpace(operation.RecoveryDescription)));
+        Assert.Contains("cannot be recovered", OperationCatalog.All.Single(x => x.Id == "cleanup-temp").RecoveryDescription);
+        Assert.Contains("reset-only", OperationCatalog.All.Single(x => x.Id == "restore-network").RecoveryDescription);
+        Assert.DoesNotContain("Safe", OperationCatalog.All.Single(x => x.Id == "cleanup-background").Name);
+    }
+    [Fact]
     public void OperationIds_AreUniqueAndNonEmpty()
     {
         Assert.All(OperationCatalog.All, operation => Assert.False(string.IsNullOrWhiteSpace(operation.Id)));

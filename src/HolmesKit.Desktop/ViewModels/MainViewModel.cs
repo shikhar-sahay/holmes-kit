@@ -121,7 +121,7 @@ public sealed class MainViewModel : ObservableObject
         var safety = operation.IsRestore
             ? "Recovery may overwrite settings or apply defaults; it does not guarantee exact original state."
             : "The retained recovery baseline must validate first. Deleted files and unsaved work cannot be recovered. Cancellation is disabled while changes run.";
-        var message = $"{operation.Description}\n\nAffected: {operation.Affects}\nTradeoff: {operation.Tradeoff}\nRestart/logoff: {operation.Restart}\n\n{safety} Continue?";
+        var message = $"{operation.Description}\n\nAffected: {operation.Affects}\nTradeoff: {operation.Tradeoff}\nRestart/logoff: {operation.Restart}\nRecovery: {operation.RecoveryDescription}\n\n{safety} Continue?";
         if (Confirm?.Invoke(operation.Name, message) != true) return;
         await WithBusyAsync(operation.Name, async token =>
         {
