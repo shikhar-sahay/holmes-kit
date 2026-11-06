@@ -33,6 +33,12 @@ public class MainWindowConstructionTests
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
                 stage = "application resources";
                 var app = new App { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+                Exception? dispatcherFailure = null;
+                app.DispatcherUnhandledException += (_, args) =>
+                {
+                    dispatcherFailure = args.Exception;
+                    args.Handled = true; // Never leave an unattended error MessageBox on a hosted runner.
+                };
                 // Load the actual theme resources without App.xaml's StartupUri (which opens a window).
                 app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HolmesKit;component/Themes/DarkPalette.xaml") });
                 app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HolmesKit;component/Themes/Controls.xaml") });
@@ -110,6 +116,7 @@ public class MainWindowConstructionTests
                         window.UpdateLayout();
                         stage = $"page {index}, 1120x760 dispatcher";
                         PumpDispatcher();
+                        Assert.Null(dispatcherFailure);
                         Assert.True(((TabItem)pages.Items[index]).IsSelected);
                     }
                     foreach (var size in new[] { new Size(900, 620), new Size(1600, 900) })
@@ -122,6 +129,7 @@ public class MainWindowConstructionTests
                             window.Measure(size); window.Arrange(new Rect(size)); window.UpdateLayout();
                             stage = $"page {index}, {size} dispatcher";
                             PumpDispatcher();
+                            Assert.Null(dispatcherFailure);
                         }
                     }
                     Assert.False(model.IsBusy);
@@ -137,6 +145,7 @@ public class MainWindowConstructionTests
                 Assert.True(cancel.IsDefault);
                 if (!string.IsNullOrWhiteSpace(outputDirectory)) SaveScreenshot(confirmation, Path.Combine(outputDirectory, "confirmation.png"));
                 confirmation.Close();
+                Assert.Null(dispatcherFailure);
                 Assert.Empty(bindingErrors.Errors);
                 window.Close();
                 stage = "shutdown";

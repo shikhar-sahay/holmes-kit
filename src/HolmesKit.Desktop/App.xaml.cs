@@ -10,6 +10,7 @@ public partial class App : Application
         SystemParameters.StaticPropertyChanged += OnSystemPreferenceChanged;
         DispatcherUnhandledException += (_, args) =>
         {
+            if (args.Handled) return;
             MessageBox.Show($"HolmesKit encountered an unexpected error.\n\n{args.Exception.Message}", "HolmesKit", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
