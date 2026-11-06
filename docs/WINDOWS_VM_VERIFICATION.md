@@ -39,6 +39,12 @@ The release workflow prepares CI artifacts only. Publish a versioned GitHub Rele
 
 A future static GitHub Pages overview may link requirements, recovery limits, source and verified downloads. Website deployment is deferred until release validation and licensing; no browser backend is needed.
 
+## Task 05 acceptance follow-up
+
+No disposable VM/checkpoint was separately authorized. Native mutation/recovery scenarios remain **NOT EXECUTED**. Task 05 inspected the real packaged startup/Home and used a non-elevated mutation-disconnected harness for UI review. Elevated input restrictions were not bypassed. Shared-helper active-request, foreground and observation-cache failures limited keyboard/click coverage. Rendered captures of all ten pages at supported sizes are layout evidence, not a full interactive PASS.
+
+Before release, finish dialog Escape/Enter/close, search/sort/refresh, Copy/Reload/Clear view, fixture error/partial states, normal and maximized windows, actual 100/125/150% DPI, high contrast and Narrator checks in an isolated desktop session. Record the exact candidate SHA and distinguish fixture data from native state. Do not alter global accessibility/display settings without specific authorization, recording and restoring original settings. Never use QA baseline illustrations as actual recovery data.
+
 ## Task 04 desktop validation follow-up
 
 Native recovery remains **NOT EXECUTED**. Task 04 adds no permission to modify this workstation. The interrupted desktop review was not resumed because the operator requested non-interactive verification only. After separate authorization, review all ten pages, expanded operation details, Cancel/Confirm/close behavior using inert fixtures, error/partial/progress states, long names/commands and empty filters. Check default, 900×620 and maximized windows at 100/125/150% scaling, keyboard-only use, screen-reader output and high contrast (including selected rows and charts). Offscreen size/layout checks do not establish these results.

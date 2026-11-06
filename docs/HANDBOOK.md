@@ -68,14 +68,32 @@ For a native adapter change, test conversion/validation without Windows writes f
 
 ## Candidate preparation and future release
 
+### Task 05 acceptance harness
+
+`tests/HolmesKit.Desktop.Acceptance` is a separate non-elevated QA executable using the production MainWindow, dialog, styles and telemetry. Run it only for authorized local UI review:
+
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.4.0-rc.3
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip
-Get-FileHash ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip -Algorithm SHA256
+dotnet run --project tests/HolmesKit.Desktop.Acceptance -c Release
+```
+
+The adapter delegates only the three read queries. Optimization, restoration, startup-toggle and uninstall methods return clearly labelled inert fixture results and never call the underlying native service. Tests check all three mutation methods for success/failure/partial fixture outcomes. Example lists are the default; switching list mode requires Refresh on the selected page. F12 hides/shows fixture controls. Slow/failing reads and inert failure/partial outcomes are test scenarios, not measured system behavior.
+
+The harness has its own private QA log and optional UI-only baseline illustrations. These contain private identifiers; never commit, distribute or copy them into a real recovery directory. They are not authoritative engine journals. Fixture dialogs appear on the taskbar solely to aid QA-tool targeting; production dialogs retain their owned, taskbar-free behavior. The harness is built by CI but excluded from the portable product.
+
+Task 05 directly observed a white confirmation background: an implicit Window style did not apply to the derived window. MainWindow and ConfirmationWindow now explicitly select that style. Tests assert actual dark backgrounds and a base FontSize of 13 device-independent units, in addition to binding/default-button checks. Cancel focus is set after content rendering and Escape has an explicit decline path. The session Clear view DockPanel no longer fills the remaining header width. Offscreen tests measure the content root explicitly: measuring an unshown Window alone can leave child widths zero. None of these checks certifies complete interactive keyboard or screen-reader behavior.
+
+The packaged elevated executable's launch/data evidence, non-elevated fixture interaction, rendered captures, and automated tests are separate evidence classes. Integrity boundaries were preserved; no UAC/security workaround was introduced. Shared-helper focus/cache errors prevented complete click-by-click acceptance. Do not mark that gate PASS on the strength of screenshots or construction tests alone.
+
+```powershell
+./tools/Publish-Portable.ps1 -Version 0.5.0-rc.2
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip
+Get-FileHash ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip -Algorithm SHA256
 ```
 
 Compare the archive hash to its `.sha256` sidecar. The verifier also checks complete runtime layout, duplicate/traversal paths, manifest coverage and each payload hash; it does not authenticate the publisher or execute the EXE. Keep each version unique; tooling does not overwrite release assets. Build/archive timestamps and SDK differences mean bit-for-bit reproducibility is not guaranteed.
 
 Windows CI runs safe verification. The manual `Prepare unsigned portable candidate` workflow runs tests and uploads an Actions artifact, without publishing a Release or tag. Downloaded artifacts must be independently checked. This project has no approved licence file: public source visibility does not grant normal reuse/distribution permissions. Owner decisions may include a permissive licence (MIT/Apache-2.0), copyleft terms (GPL), or proprietary distribution; compatibility and obligations need owner/legal review. No licence text is selected here.
+
+If workflow dispatch is unavailable to the connected tools, an authorized operator can open **Actions → Prepare unsigned portable candidate → Run workflow**, select `master`, enter a fresh version (do not overwrite a local/hosted candidate identifier), then download `unsigned-portable-candidate`. Extract the artifact wrapper and run `Test-PortableCandidate.ps1` on its product ZIP; compare engine/module/document payloads to that run's exact source SHA. A successful local package is not a hosted packaging result, and neither publishes a GitHub Release.
 
 Candidates are unsigned; SmartScreen warnings may occur. Do not weaken Windows security to hide them. A real certificate and signing policy would be separate work. A public Release/download site requires the [release gates](RELEASE_READINESS.md), owner approval and a recorded VM evidence matrix. No public release or website is created by these scripts.

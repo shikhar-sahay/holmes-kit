@@ -23,7 +23,11 @@ Home shows live CPU and physical-memory usage with a fixed 0–100% scale and up
 
 Storage figures describe **capacity**, not disk activity. System Info and storage/power metadata remain on-demand snapshots; use **Refresh** there to update them. Startup and Applications retain search, sorting, refresh and confirmed row actions. Recovery distinguishes missing, legacy, interrupted and invalid baselines; a ready display is a preliminary check, not a guarantee of conflict-free recovery.
 
-High-contrast brush support, visible keyboard focus and resizable/scrollable content are implemented. Interactive screen-reader, DPI and full visual validation remain outstanding. The [earlier Core screenshot](docs/screenshots/desktop-core.png) predates this theme; replacement screenshots await authorized visual review.
+Task 05 corrected a white-background confirmation dialog by explicitly applying the shared Window style, retained Cancel as the default, simplified Home's OS/unknown-memory labels, and made Clear view compact and right-aligned. The packaged Task 04 application launched with live data; elevated input restrictions and an unstable shared desktop helper limited interactive acceptance. All ten pages received rendered-layout review using the same views with native mutations disconnected. Full keyboard, screen-reader, DPI and high-contrast acceptance remain outstanding.
+
+![Current Core page, rendered by the mutation-disconnected acceptance harness](docs/screenshots/desktop-core-task05.png)
+
+This is a privacy-reviewed capture of the actual WPF Core view in the inert acceptance harness, not evidence of native optimization execution. The [older screenshot](docs/screenshots/desktop-core.png) is retained as historical material.
 
 ## Requirements and running
 
@@ -51,8 +55,8 @@ Ordinary tests use inert command stubs, mocked native adapters and temporary fix
 ## Portable candidates
 
 ```powershell
-./tools/Publish-Portable.ps1 -Version 0.4.0-rc.3
-./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.4.0-rc.3-win-x64.zip
+./tools/Publish-Portable.ps1 -Version 0.5.0-rc.2
+./tools/Test-PortableCandidate.ps1 -CandidateZip ./artifacts/packages/HolmesKit-0.5.0-rc.2-win-x64.zip
 ```
 
 Copy the entire extracted folder. Packaging includes the EXE, Batch/modules, documentation, version and checksums; it excludes local recovery/logs. CI runs safe Windows tests. The manual candidate workflow creates an Actions artifact, not a public Release or tag. The verifier checks content/integrity, not publisher authenticity or native behavior. No installer, updater, signing certificate or download website is supplied.
